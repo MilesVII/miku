@@ -256,8 +256,8 @@ async function loginSucceed(role){
 	if (!loginForm.classList.contains("hidden")) loginForm.classList.add("hidden");
 
 	let loaders = [
+		"/pages/hakase/loaders/loader_a.gif"
 		/*
-		"/pages/hakase/loaders/loader_a.gif", 
 		"/pages/hakase/loaders/loader_b.gif", 
 		"/pages/hakase/loaders/loader_c.gif", 
 		"/pages/hakase/loaders/loader_d.gif", 
@@ -267,7 +267,6 @@ async function loginSucceed(role){
 		"/pages/hakase/loaders/loader_h.gif", 
 		"/pages/hakase/loaders/loader_i.gif"
 		*/
-		"https://img3.gelbooru.com//images/72/99/7299f8becc23b231cc54af203205d756.gif"
 	];
 	let loaderId = Math.floor(Math.random() * loaders.length);
 	document.querySelector("#loader").src = loaders[loaderId];
