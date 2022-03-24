@@ -305,7 +305,13 @@ async function loginSucceed(role){
 		fetch(link.href).then(async r => {
 			let source = await r.text();
 			let d = new DOMParser().parseFromString(source, "text/html");
-			let name = Array.from(d.querySelectorAll("meta")).find(e => e.getAttribute("property") == "og:title")?.content;
+			let name = null;
+			let ogTitle = Array.from(d.querySelectorAll("meta")).find(e => e.getAttribute("property") == "og:title");
+			let defTitle = d.querySelector("title");
+			if (ogTitle)
+				name = ogTitle.content;
+			else if (defTitle)
+				name = defTitle.text;
 			if (name) link.textContent = name;
 		})
 	}

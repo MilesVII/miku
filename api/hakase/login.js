@@ -27,8 +27,8 @@ export default function handler(request, response) {
 		let responseBody = {
 			role: role
 		};
-		//response.setHeader("Set-Cookie", `access=${token}; Secure;`);
-		response.setHeader("Set-Cookie", `access=${token};`);
+		response.setHeader("Set-Cookie", `access=${token}; Secure;`);
+		//response.setHeader("Set-Cookie", `access=${token};`);
 		response.status(200).send(responseBody);
 	} else
 		response.status(401).end();
