@@ -1,0 +1,118 @@
+:root {
+	--accent: darkred;
+	--shy: rgba(255, 255, 255, .3);
+}
+
+* {
+	color-scheme: dark;
+	box-sizing: border-box;
+	
+	font-family: Roboto, sans-serif;
+	font-size: 2.3vw;
+}
+
+html, body {
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+img {
+	max-width: 90%;
+	display: block;
+}
+
+#tabbar {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: center;
+	width: 100%;
+	margin: 1vw 0 1vw 0;
+
+	border-style: solid;
+	border-width: 0;
+	border-bottom-width: .2vw;
+	border-color: var(--shy);
+}
+
+.tab {
+	display: inline-block;
+	padding: .5vw 1.5vw .5vw 1.5vw;
+	border-width: 0;
+	border-bottom-width: .3vw;
+	border-radius: .3vw;
+}
+
+.tab.selected {
+	border-style: solid;
+	border-color: var(--accent);
+}
+
+.button {
+	border-radius: .3vw;
+	transition: background-color .7s;
+	cursor: pointer;
+}
+
+.button:hover {
+	background-color: rgba(255, 255, 255, .3);
+}
+
+.button:active {
+	background-color: darkred;
+}
+
+#main {
+	width: 80%;
+	margin: auto;
+}
+
+.wide {
+	width: 100%;
+}
+
+.page {
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: center;
+}
+
+.settingsRow {
+	display: flex;
+	margin: 0 2% 1vw 2%;
+	flex-flow: row nowrap;
+	justify-content: center;
+	align-items: baseline;
+	width: 90%
+}
+
+.settingsColumn {
+	margin-left: 2%;
+	width: 45%;
+	text-align: right;
+}
+
+.wideButton {
+	padding: .5vw;
+	margin: .1vw;
+	min-width: 10vw;
+	text-align: center;
+}
+
+.preview {
+	background-color: lightsalmon;
+}
+
+.previewAnimated {
+	background-color: mediumslateblue;
+}
+
+.previewSelected {
+	border-color: darkred;
+	border-style: solid;
+	border-width: .42vw;
+}
+
+.hidden {
+	display: none;
+}

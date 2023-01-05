@@ -38,3 +38,25 @@ export function genericTgRequest(command, payload){
 		req.end()
 	});
 }
+
+export function phetch(url, options = {}, payload){
+	return new Promise(resolve => {
+		options.method ||= "GET";
+
+		const req = https.request(url, options, res => {
+			let responseData = [];
+			res.on('data', chunk => {
+				responseData.push(chunk);
+			});
+			res.on('end', async () => {
+				let responseBody = Buffer.concat(responseData).toString();
+	
+				resolve(responseBody);
+			});
+		});
+
+		if (payload) req.write(payload);
+
+		req.end()
+	});
+}

@@ -1,5 +1,5 @@
-import { initializeApp } from "firebase/app"; 
-import { getDatabase, ref, child, get } from "firebase/database"; 
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, child, get } from "firebase/database";
 
 async function load(key) {
 	const dbRef = ref(getDatabase());
