@@ -1,4 +1,4 @@
-import { tg, phetch, safeParse } from "../utils.js";
+import { tg, tgReport, phetch, safeParse } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
@@ -154,6 +154,7 @@ export default async function handler(request, response) {
 
 			for (const post of selectedPosts){
 				let sent = true;
+				let tgResponse;
 				if (post.message.links.length > 0){
 					const mediaGroup = post.message.links.map(link => ({
 						type: "photo",
@@ -161,12 +162,11 @@ export default async function handler(request, response) {
 					}));
 					mediaGroup[0].caption = post.message.caption;
 					mediaGroup[0].parse_mode = "MarkdownV2"
-					const r = safeParse(await tg("sendMediaGroup", {
+					tgResponse = safeParse(await tg("sendMediaGroup", {
 						chat_id: post.target,
 						media: mediaGroup
 					}, post["users"]["tg_token"])) || {};
-					console.log(r);
-					sent = !!r.ok;
+					sent = !!tgResponse.ok;
 				}
 				if (sent){
 					//Remove post from db
@@ -182,6 +182,7 @@ export default async function handler(request, response) {
 
 				} else {
 					//something is fucked up, mark message as broken or dunno
+					tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${tgResponse}`);
 				}
 			}
 

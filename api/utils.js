@@ -47,3 +47,10 @@ export function tg(command, payload, token = process.env.TG_TOKEN){
 	}
 	return phetch(url, options, payload);
 }
+
+export function tgReport(message){
+	return tg("sendMessage", {
+		chat_id: process.env.TG_T_ME,
+		text: message
+	});
+}
