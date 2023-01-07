@@ -182,9 +182,8 @@ export default async function handler(request, response) {
 
 				} else {
 					//something is fucked up, mark message as broken or dunno
-					tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`);
+					await tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`);
 				}
-				tgReport(post.id + " " + JSON.stringify(tgResponse));
 			}
 
 			response.status(200).send();
