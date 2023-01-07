@@ -27,10 +27,7 @@ const schema = {
 	add: {
 		user: true,
 		userToken: true,
-		message: {
-			links: true,
-			caption: true
-		},
+		messages: true, //[]
 		target: true
 	},
 	publish: {
@@ -96,11 +93,19 @@ export default async function handler(request, response) {
 				"Content-Type": "application/json",
 				"Prefer": "return=minimal"
 			};
-			const payload = {
+			// const payload = {
+			// 	user: request.body.user,
+			// 	message: request.body.message,
+			// 	target: request.body.target
+			// };
+			const payload = request.body.messages.map(msg => ({
 				user: request.body.user,
-				message: request.body.message,
+				message: {
+					links: msg.links,
+					caption: msg.caption
+				},
 				target: request.body.target
-			};
+			}))
 			const r = await phetch(url, {
 				method: "POST",
 				headers: headers
@@ -160,6 +165,7 @@ export default async function handler(request, response) {
 						chat_id: post.target,
 						media: mediaGroup
 					}, post["users"]["tg_token"])) || {};
+					console.log(r);
 					sent = !!r.ok;
 				}
 				if (sent){
