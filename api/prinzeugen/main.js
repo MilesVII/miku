@@ -118,17 +118,16 @@ export default async function handler(request, response) {
 			//User can inject filters by abusing target or id properties, but the result of query will be processed on server anyways
 			const targetFilter = request.body.target ? "&target=eq." + request.body.target : "";
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
-			const url = `${process.env.PE_DB_URL}/rest/v1/pool?user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
+			const url = `${process.env.PE_DB_URL}/rest/v1/pool?failed=eq.false&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
 			const headers = {
 				"apikey": process.env.PE_SUPABASE_KEY,
 				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`
 			};
-			let availablePosts = await phetch(url, {
+			let availablePosts = safeParse(await phetch(url, {
 				method: "GET",
 				headers
-			}, null);
+			}, null));
 
-			availablePosts = safeParse(availablePosts);
 			if (!availablePosts){
 				response.status(500).send("Invalid response from db");
 				return;
@@ -182,7 +181,23 @@ export default async function handler(request, response) {
 
 				} else {
 					//something is fucked up, mark message as broken or dunno
-					await tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`);
+					const url = `${process.env.PE_DB_URL}/rest/v1/pool?id=eq.${post.id}`;
+					const headers = {
+						"apikey": process.env.PE_SUPABASE_KEY,
+						"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
+						"Content-Type": "application/json",
+						"Prefer": "return=minimal"
+					};
+					const payload = { failed: true };
+
+					Promise.allSettled([
+						await tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`),
+						await phetch(url, {
+							method: "PATCH",
+							headers: headers
+						}, JSON.stringify(payload))
+					])
+					
 				}
 			}
 
