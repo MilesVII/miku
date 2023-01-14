@@ -17,9 +17,35 @@ html, body {
 	padding: 0;
 }
 
+body {
+	min-height: 100vh;
+}
+
 img {
 	max-width: 90%;
 	display: block;
+}
+
+#curtain {
+	position: fixed;
+	width: 100%;
+	height: 100vh;
+	background-color: darkslategray;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 10;
+	transition: opacity .4s;
+}
+
+#login {
+	width: 100%;
+	height: 100vh;
+	padding: 0 25% 0 25%;
+	display: flex;
+	flex-flow: column wrap;
+	justify-content: center;
+	align-content: center;
 }
 
 #tabbar {
@@ -59,7 +85,7 @@ img {
 }
 
 .button:active {
-	background-color: darkred;
+	background-color: var(--accent);
 }
 
 #main {
@@ -114,5 +140,5 @@ img {
 }
 
 .hidden {
-	display: none;
+	display: none !important;
 }

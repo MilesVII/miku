@@ -8,6 +8,10 @@ export function safeParse(str){
 	}
 }
 
+export function last(arr){
+	return arr[arr.length - 1];
+}
+
 export function phetch(url, options = {}, payload){
 	return new Promise(resolve => {
 		options.method = options.method || "GET";
@@ -53,4 +57,10 @@ export function tgReport(message){
 		chat_id: process.env.TG_T_ME,
 		text: message
 	});
+}
+
+//https://github.com/edwmurph/escape-markdown/blob/master/index.js
+export function escapeMarkdown(raw){
+	const substitutions = {'*': '\\*','#': '\\#','(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;'};
+	return raw.replace(/[\*\(\)\[\]\+\-\\_`#<>]/g, m => substitutions[m]);
 }

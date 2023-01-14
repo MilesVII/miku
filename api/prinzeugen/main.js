@@ -1,4 +1,4 @@
-import { tg, tgReport, phetch, safeParse } from "../utils.js";
+import { tg, tgReport, phetch, last, safeParse, escapeMarkdown } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
@@ -6,64 +6,198 @@ function buildURLParams(params){
 		.join("&");
 }
 
-function gelbooruPosts(key, user, query, page){
-	const params = buildURLParams({
-		page: "dapi",
-		s: "post",
-		q: "index",
-		tags: query,
-		pid: page,
-		json: 1,
-		api_key: key,
-		user_id: user
-	});
-	const url = `https://gelbooru.com/index.php?${params}`;
-	
-	return phetch(url);
+async function db(url, method, headers, body){
+	return safeParse(
+		await phetch(`${process.env.PE_DB_URL}${url}`, {
+			method: method || "GET",
+			headers: Object.assign({
+				"apikey": process.env.PE_SUPABASE_KEY,
+				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
+				"Content-Type": "application/json"
+			}, headers || {})
+		}, JSON.stringify(body) || null)
+	);
 }
 
+async function grab(user, token){
+	let grabbers = await getGrabbers(id, token);
 
-const schema = {
-	add: {
-		user: true,
-		userToken: true,
-		messages: true, //[]
-		target: true
-	},
-	publish: {
-		user: true,
-		userToken: true
-		//target and id can also be specified
+	const grabs = grabbers.map(grabber => GRABBERS[grabber.type]);
+	await Promise.allSettled(grabs);
+
+
+}
+
+const GRABBERS = {
+	"gelbooru": async grabber => {
+		const lastSeen = grabber.state.lastSeen || 0;
+		const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
+
+		const tags = grabber.config.tags.join(" ~ ");
+		const black = grabber.config.black.join(" ~ ");
+		const white = mandatoryFilter.concat(grabber.config.white).join(" ");
+		const query = `{${tags}} -{${black}} ${white}`;
+
+		const params = buildURLParams({
+			page: "dapi",
+			s: "post",
+			q: "index",
+			tags: query,
+			pid: 0,
+			json: 1,
+			api_key: key,
+			user_id: user
+		});
+		const url = `https://gelbooru.com/index.php?${params}`;
+
+		const response = safeParse(await phetch(url)) || {};
+		const posts = (response?.post || []).map(raw => ({
+			links: [
+				raw.file_url,
+				raw.sample_url,
+				raw.preview_url,
+			],
+			id: raw.id,
+			link: `https://gelbooru.com/index.php?page=post&s=view&id=${raw.id}`,
+			source: raw.source?.startsWith("http") ? raw.source : null,
+			tags: raw.tags.split(" "),
+			rating: raw.score,
+			nsfw: !(raw.rating == "general" || raw.rating == "sensitive"),
+			artists: tags.filter(a => raw.tags.includes(a))
+		}));
+
+		if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
+
+		function caption(post){
+			const emd = escapeMarkdown;
+			const gbSource = `[gb](${post.link})`;
+			const originalSource = post.source ? ` [src](${emd(post.source)})` : "";
+			const artists = post.artists
+				.map(
+					a => `[${emd(a)}](https://gelbooru.com/index.php?page=post&s=list&tags=${emd(encodeURIComponent(raw))})`
+				)
+				.join(" & ");
+			return `${gbSource}${originalSource}\n${artists}`;
+		}
+
+		const messages = posts.map(p => ({
+			raw: p,
+			attachments: [p.links],
+			caption: caption(p)
+		}));
+
+		return messages;
 	}
 }
 
+async function getGrabbers(user, token){
+	const response = await db(
+		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
+		"GET",
+		null,
+		null
+	);
+	console.log(response)
+	if (response?.length > 0 && Object.hasOwn(response[0], "grabbers"))
+		return response[0].grabbers || [];
+	else
+		return null;
+}
+
+function setGrabbers(user, token, grabbers){
+	return db(
+		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
+		"PATCH",
+		null,
+		{grabbers: grabbers}
+	);
+}
+
+const SCH = {
+	any: 0,
+	string: 1,
+	number: 2,
+	bool: 3,
+	array: 4
+};
+const schema = {
+	login: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	setGrabbers: {
+		user: SCH.number,
+		userToken: SCH.string,
+		grabbers: SCH.any
+	},
+	getGrabbers: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	grab: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	post: {
+		user: SCH.number,
+		userToken: SCH.string,
+		messages: SCH.array,
+		target: SCH.string
+	},
+	publish: {
+		user: SCH.number,
+		userToken: SCH.string
+		//target and id can also be specified
+	}
+};
+
+const grabberSchemas = {
+	gelbooru: {
+		credentials: {
+			user: SCH.number,
+			token: SCH.string
+		},
+		config: {
+			tags: SCH.array,
+			white: SCH.array,
+			blacks: SCH.array,
+			moderated: SCH.bool
+		},
+		state: {
+			lastSeen: SCH.number
+		}
+	}
+};
+
 function validate(schema, obj){
 	const objProperties = Object.keys(obj);
-	return Object.keys(schema).every(skey =>
-		objProperties.includes(skey) && (schema[skey] == true || validate(schema[skey], obj[skey]))
+	return Object.keys(schema).every(skey => {
+		if (!objProperties.includes(skey)) return false;
+		if (typeof schema[skey] == "object") return validate(schema[skey], obj[skey]);
+		switch (schema[skey]){
+			case (SCH.any):    return true;
+			case (SCH.string): return typeof obj[skey] == "string";
+			case (SCH.number): return typeof obj[skey] == "number";
+			case (SCH.bool):   return typeof obj[skey] == "boolean";
+			case (SCH.array):  return Array.isArray(obj[skey]);
+			default: return true;
+		}
+	});
+}
+
+function validateGrabber(grabber){
+	return (
+		grabber.type && 
+		grabberSchemas[grabber.type] && 
+		validate(grabberSchemas[grabber.type], grabber)
 	);
 }
 
 async function userAccessAllowed(id, token){
-	const url = `${process.env.PE_DB_URL}/rest/v1/users?id=eq.${id}&select=access_token`;
-	const headers = {
-		"apikey": process.env.PE_SUPABASE_KEY,
-		"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
-		"Content-Type": "application/json"
-	};
-	let user;
-	try {
-		user = JSON.parse(
-			await phetch(url, {
-				method: "GET",
-				headers: headers
-			}, null)
-		);
-	} catch(e){
-		return false;
-	}
-	
-	return user[0] && user[0]["access_token"] == token;
+	const user = safeParse(
+		await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null)
+	);
+	return user && user[0] && user[0]["access_token"] == token;
 }
 
 export default async function handler(request, response) {
@@ -80,36 +214,41 @@ export default async function handler(request, response) {
 		return;
 	}
 	switch (request.body.action){
-		case ("add"): {
+		case ("login"): {
+			const success = await userAccessAllowed(request.body.user, request.body.userToken);
+			response.status(success ? 200 : 401).send();
+			return;
+		}
+		case ("getGrabbers"): {
+			const grabs = await getGrabbers(request.body.user, request.body.userToken);
+			if (grabs)
+				response.status(200).send(grabs);
+			else
+				response.status(401).send("Wrong user id or access token");
+			return;
+		}
+		case ("setGrabbers"): {
+			if (!Array.isArray(request.body.grabbers)) {
+				response.status(400).send("Invalid action schema: 'grabbers' must be an array");
+				return;
+			}
+			const invalidGrabbers = request.body.grabbers.filter(g => !validateGrabber(g));
+			if (invalidGrabbers.length > 0) {
+				response.status(400).send(invalidGrabbers);
+				return;
+			}
+			
+			await setGrabbers(request.body.user, request.body.userToken, request.body.grabbers);
+			response.status(200).send();
+			return;
+		}
+		case ("post"): {
 			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
 				response.status(401).send("Wrong user id or access token");
 				return;
 			}
 
-			const url = `${process.env.PE_DB_URL}/rest/v1/pool`;
-			const headers = {
-				"apikey": process.env.PE_SUPABASE_KEY,
-				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
-				"Content-Type": "application/json",
-				"Prefer": "return=minimal"
-			};
-			// const payload = {
-			// 	user: request.body.user,
-			// 	message: request.body.message,
-			// 	target: request.body.target
-			// };
-			const payload = request.body.messages.map(msg => ({
-				user: request.body.user,
-				message: {
-					links: msg.links,
-					caption: msg.caption
-				},
-				target: request.body.target
-			}))
-			const r = await phetch(url, {
-				method: "POST",
-				headers: headers
-			}, JSON.stringify(payload));
+			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, payload);
 
 			response.status(200).send(r);
 			break;
@@ -118,15 +257,9 @@ export default async function handler(request, response) {
 			//User can inject filters by abusing target or id properties, but the result of query will be processed on server anyways
 			const targetFilter = request.body.target ? "&target=eq." + request.body.target : "";
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
-			const url = `${process.env.PE_DB_URL}/rest/v1/pool?failed=eq.false&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
-			const headers = {
-				"apikey": process.env.PE_SUPABASE_KEY,
-				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`
-			};
-			let availablePosts = safeParse(await phetch(url, {
-				method: "GET",
-				headers
-			}, null));
+			const url = `/rest/v1/pool?failed=eq.false&approved=eq.true&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
+
+			let availablePosts = safeParse(await db(url));
 
 			if (!availablePosts){
 				response.status(500).send("Invalid response from db");
@@ -165,37 +298,27 @@ export default async function handler(request, response) {
 						chat_id: post.target,
 						media: mediaGroup
 					}, post["users"]["tg_token"])) || {};
-					sent = !!tgResponse.ok;
+					sent = !!tgResponse?.ok;
 				}
 				if (sent){
 					//Remove post from db
-					const url = `${process.env.PE_DB_URL}/rest/v1/pool?id=eq.${post.id}`;
-					const headers = {
-						"apikey": process.env.PE_SUPABASE_KEY,
-						"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`
-					};
-					await phetch(url, {
-						method: "DELETE",
-						headers
-					}, null);
+					await db(
+						`/rest/v1/pool?id=eq.${post.id}`,
+						"DELETE",
+						null,
+						null
+					);
 
 				} else {
 					//something is fucked up, mark message as broken or dunno
-					const url = `${process.env.PE_DB_URL}/rest/v1/pool?id=eq.${post.id}`;
-					const headers = {
-						"apikey": process.env.PE_SUPABASE_KEY,
-						"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
-						"Content-Type": "application/json",
-						"Prefer": "return=minimal"
-					};
-					const payload = { failed: true };
-
-					Promise.allSettled([
-						await tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`),
-						await phetch(url, {
-							method: "PATCH",
-							headers: headers
-						}, JSON.stringify(payload))
+					await Promise.allSettled([
+						tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`),
+						db(
+							`/rest/v1/pool?id=eq.${post.id}`,
+							"PATCH",
+							{"Prefer": "return=minimal"},
+							{failed: true}
+						)
 					])
 					
 				}

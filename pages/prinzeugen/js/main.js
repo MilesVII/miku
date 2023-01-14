@@ -14,6 +14,29 @@ let state = {
 	rejected: []
 };
 
+let pageLock = false;
+function pullCurtain(lock){
+	const curtain = document.querySelector("#curtain");
+	if (lock){
+		if (pageLock) return false;
+		pageLock = true;
+		curtain.classList.remove("hidden");
+		curtain.offsetHeight; // force CSS recalculate
+		curtain.style.opacity = 1;
+	} else {
+		pageLock = false;
+		curtain.style.opacity = 0;
+		
+		let listener;
+		listener = () => {
+			curtain.classList.add("hidden");
+			curtain.removeEventListener("transitionend", listener);
+		}
+		curtain.addEventListener("transitionend", listener);
+	}
+	return true;
+}
+
 function main(){
 	let allTabs = document.querySelectorAll(".tab");
 	allTabs.forEach(tab => {
@@ -34,6 +57,8 @@ function main(){
 	);
 
 	loadConfig();
+
+	if (load("login") != null) authorize();
 
 	listenToKeyboard([
 		{
@@ -57,6 +82,42 @@ function main(){
 			action: () => resetSelector()
 		}
 	])
+}
+
+function authorize(){
+	document.querySelector("#login").classList.add("hidden");
+	document.querySelector("#authorized").classList.remove("hidden");
+}
+
+async function login(skip){
+	const id = document.querySelector("#login_id").value;
+	const token = document.querySelector("#login_token").value;
+
+	if (id == "" || token == "") return;
+
+	if (!pullCurtain(true)) return;
+
+	const response = await fetch("/api/prinzeugen/main", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			action: "login",
+			user: id,
+			userToken: token
+		})
+	});
+
+	if (response.status == 200) {
+		authorize();
+		save("login", {
+			id: id,
+			token: token
+		});
+	}
+
+	pullCurtain(false);
 }
 
 function renderNextBatch(){
