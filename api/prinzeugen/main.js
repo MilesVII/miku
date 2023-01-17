@@ -1,10 +1,5 @@
-import { tg, tgReport, phetch, last, safeParse, escapeMarkdown } from "../utils.js";
-
-function buildURLParams(params){
-	return Object.keys(params)
-		.map(k => `${k}=${encodeURIComponent(params[k])}`)
-		.join("&");
-}
+import { tg, tgReport, phetch, safeParse, getFileLength, parseTelegramTarget } from "../utils.js";
+import { grabbers } from "./grabbers.js";
 
 async function db(url, method, headers, body){
 	return safeParse(
@@ -15,79 +10,18 @@ async function db(url, method, headers, body){
 				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
 				"Content-Type": "application/json"
 			}, headers || {})
-		}, JSON.stringify(body) || null)
+		}, body ? JSON.stringify(body) : null)
 	);
 }
 
 async function grab(user, token){
-	let grabbers = await getGrabbers(id, token);
+	let grabbers = await getGrabbers(user, token);
 
-	const grabs = grabbers.map(grabber => GRABBERS[grabber.type]);
-	await Promise.allSettled(grabs);
-
-
-}
-
-const GRABBERS = {
-	"gelbooru": async grabber => {
-		const lastSeen = grabber.state.lastSeen || 0;
-		const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
-
-		const tags = grabber.config.tags.join(" ~ ");
-		const black = grabber.config.black.join(" ~ ");
-		const white = mandatoryFilter.concat(grabber.config.white).join(" ");
-		const query = `{${tags}} -{${black}} ${white}`;
-
-		const params = buildURLParams({
-			page: "dapi",
-			s: "post",
-			q: "index",
-			tags: query,
-			pid: 0,
-			json: 1,
-			api_key: key,
-			user_id: user
-		});
-		const url = `https://gelbooru.com/index.php?${params}`;
-
-		const response = safeParse(await phetch(url)) || {};
-		const posts = (response?.post || []).map(raw => ({
-			links: [
-				raw.file_url,
-				raw.sample_url,
-				raw.preview_url,
-			],
-			id: raw.id,
-			link: `https://gelbooru.com/index.php?page=post&s=view&id=${raw.id}`,
-			source: raw.source?.startsWith("http") ? raw.source : null,
-			tags: raw.tags.split(" "),
-			rating: raw.score,
-			nsfw: !(raw.rating == "general" || raw.rating == "sensitive"),
-			artists: tags.filter(a => raw.tags.includes(a))
-		}));
-
-		if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
-
-		function caption(post){
-			const emd = escapeMarkdown;
-			const gbSource = `[gb](${post.link})`;
-			const originalSource = post.source ? ` [src](${emd(post.source)})` : "";
-			const artists = post.artists
-				.map(
-					a => `[${emd(a)}](https://gelbooru.com/index.php?page=post&s=list&tags=${emd(encodeURIComponent(raw))})`
-				)
-				.join(" & ");
-			return `${gbSource}${originalSource}\n${artists}`;
-		}
-
-		const messages = posts.map(p => ({
-			raw: p,
-			attachments: [p.links],
-			caption: caption(p)
-		}));
-
-		return messages;
-	}
+	const results = await Promise.allSettled(grabbers.map(g => g.action()));
+	const messages = results.reduce((p, c) => p.concat(c), []);
+	
+	console.log(grabbers);
+	console.log(messages);
 }
 
 async function getGrabbers(user, token){
@@ -104,13 +38,18 @@ async function getGrabbers(user, token){
 		return null;
 }
 
-function setGrabbers(user, token, grabbers){
-	return db(
+async function setGrabbers(user, token, grabbers){
+	const response = await db(
 		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
 		"PATCH",
-		null,
+		{"Prefer": "return=representation"},
 		{grabbers: grabbers}
 	);
+
+	if (response?.length > 0)
+		return true;
+	else
+		return false;
 }
 
 const SCH = {
@@ -121,6 +60,7 @@ const SCH = {
 	array: 4
 };
 const schema = {
+	debug:{},
 	login: {
 		user: SCH.number,
 		userToken: SCH.string
@@ -137,6 +77,15 @@ const schema = {
 	grab: {
 		user: SCH.number,
 		userToken: SCH.string
+	},
+	getModerable: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	moderate: {
+		user: SCH.number,
+		userToken: SCH.string,
+		messages: SCH.array
 	},
 	post: {
 		user: SCH.number,
@@ -169,6 +118,14 @@ const grabberSchemas = {
 	}
 };
 
+const messageSchema = [
+	{
+		version: SCH.number,
+		attachments: SCH.array,
+		caption: SCH.string
+	}
+];
+
 function validate(schema, obj){
 	const objProperties = Object.keys(obj);
 	return Object.keys(schema).every(skey => {
@@ -187,9 +144,8 @@ function validate(schema, obj){
 
 function validateGrabber(grabber){
 	return (
-		grabber.type && 
-		grabberSchemas[grabber.type] && 
-		validate(grabberSchemas[grabber.type], grabber)
+		grabber.type && grabber.schema &&
+		validate(grabber.schema, grabber)
 	);
 }
 
@@ -198,6 +154,54 @@ async function userAccessAllowed(id, token){
 		await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null)
 	);
 	return user && user[0] && user[0]["access_token"] == token;
+}
+
+async function sendMessage(message, token, target){
+	async function slowFind(src, searchlight){
+		for (let i of src)
+			if (await searchlight(i)) return i;
+		return null;
+	}
+
+	let sent = false;
+	let tgResponse;
+
+	if (message.version == 0){
+		message.attachments = message.attachments.slice(0, 2).filter(l => l.length > 0);
+
+		const attachments = (await Promise.all(message.attachments.map(linkSet =>
+			slowFind(linkSet, async link => (await getFileLength(link)) < 9*1024*1024)
+		))).filter(link => link);
+
+		if (attachments.length > 0){
+			console.log(attachments);
+			const mediaGroup = attachments.map(link => ({
+				type: "photo",
+				media: link
+			}));
+			mediaGroup[0].caption = message.caption;
+			mediaGroup[0].parse_mode = "MarkdownV2";
+			
+			tgResponse = safeParse(await tg("sendMediaGroup", {
+				chat_id: target,
+				media: mediaGroup
+			}, token)) || {};
+			sent = !!tgResponse?.ok;
+		} else if (message.attachments.length == 0){
+			tgResponse = safeParse(await tg("sendMessage", {
+				chat_id: target,
+				text: message.caption,
+				parse_mode: "MarkdownV2"
+			}, token)) || {};
+			sent = !!tgResponse?.ok;
+		} else {
+			tgResponse = "No attachments approved";
+			sent = false;
+		}
+	}
+	
+	if (sent) return null;
+	return tgResponse;
 }
 
 export default async function handler(request, response) {
@@ -214,6 +218,13 @@ export default async function handler(request, response) {
 		return;
 	}
 	switch (request.body.action){
+		case ("debug"): {
+			//const r = await db(`/rest/v1/pool?failed=eq.true`, "PATCH", null, {failed: false});
+			const r = await db(`/rest/v1/pool?user=eq.1`, "PATCH", null, {target: "-1001599644614"});
+			
+			response.status(200).send(r);
+			return;
+		}
 		case ("login"): {
 			const success = await userAccessAllowed(request.body.user, request.body.userToken);
 			response.status(success ? 200 : 401).send();
@@ -227,6 +238,11 @@ export default async function handler(request, response) {
 				response.status(401).send("Wrong user id or access token");
 			return;
 		}
+		case ("grab"): {
+			await grab(request.body.user, request.body.userToken);
+			response.status(200).send();
+			return;
+		}
 		case ("setGrabbers"): {
 			if (!Array.isArray(request.body.grabbers)) {
 				response.status(400).send("Invalid action schema: 'grabbers' must be an array");
@@ -238,8 +254,23 @@ export default async function handler(request, response) {
 				return;
 			}
 			
-			await setGrabbers(request.body.user, request.body.userToken, request.body.grabbers);
-			response.status(200).send();
+			const success = await setGrabbers(request.body.user, request.body.userToken, request.body.grabbers);
+			response.status(success ? 200 : 401).send();
+			return;
+		}
+		case ("getModerables"): {
+			const messages = await db(
+				`/rest/v1/pool?approved=eq.false&user=eq.${request.body.user}&users!inner(access_token)=eq.${request.body.userToken}&select=*`,
+				"GET",
+				{"Range": "0-100"},
+				null
+			);
+			console.log(messages);
+			response.status(200).send(messages);
+			return;
+		}
+		case ("moderate"): {
+			response.status(501).send();
 			return;
 		}
 		case ("post"): {
@@ -248,7 +279,7 @@ export default async function handler(request, response) {
 				return;
 			}
 
-			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, payload);
+			//const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, payload);
 
 			response.status(200).send(r);
 			break;
@@ -259,10 +290,10 @@ export default async function handler(request, response) {
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
 			const url = `/rest/v1/pool?failed=eq.false&approved=eq.true&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
 
-			let availablePosts = safeParse(await db(url));
+			let availablePosts = await db(url);
 
 			if (!availablePosts){
-				response.status(500).send("Invalid response from db");
+				response.status(502).send("Invalid response from db");
 				return;
 			}
 
@@ -285,32 +316,26 @@ export default async function handler(request, response) {
 			}
 
 			for (const post of selectedPosts){
-				let sent = true;
-				let tgResponse;
-				if (post.message.links.length > 0){
-					const mediaGroup = post.message.links.map(link => ({
-						type: "photo",
-						media: link
-					}));
-					mediaGroup[0].caption = post.message.caption;
-					mediaGroup[0].parse_mode = "MarkdownV2"
-					tgResponse = safeParse(await tg("sendMediaGroup", {
-						chat_id: post.target,
-						media: mediaGroup
-					}, post["users"]["tg_token"])) || {};
-					sent = !!tgResponse?.ok;
+				let success = false;
+				let tgResponse = null;
+
+				const target = parseTelegramTarget(post.target);
+				if (target != null) {
+					tgResponse = await sendMessage(post.message, post["users"]["tg_token"], target);
+					if (tgResponse == null)
+						success = true;
+				} else {
+					tgReport(`Failed to parse target id for post #${post.id}`);
 				}
-				if (sent){
-					//Remove post from db
+
+				if (success){
 					await db(
 						`/rest/v1/pool?id=eq.${post.id}`,
 						"DELETE",
 						null,
 						null
 					);
-
 				} else {
-					//something is fucked up, mark message as broken or dunno
 					await Promise.allSettled([
 						tgReport(`Failed to publish post #${post.id}.\nTelegram response:\n${JSON.stringify(tgResponse)}`),
 						db(
@@ -320,14 +345,11 @@ export default async function handler(request, response) {
 							{failed: true}
 						)
 					])
-					
 				}
 			}
 
 			response.status(200).send();
 			break;
-
-			/**/
 		}
 		default: {
 			response.status(400).send("Malformed request");
