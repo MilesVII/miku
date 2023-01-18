@@ -1,4 +1,4 @@
-import { phetch, safeParse } from "../utils.js";
+import { phetch, safeParse, SCH } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
@@ -9,15 +9,27 @@ function buildURLParams(params){
 export const grabbers = {
 	"gelbooru": {
 		schema: {
-
+			credentials: {
+				user: SCH.number,
+				token: SCH.string
+			},
+			config: {
+				tags: SCH.array,
+				whites: SCH.array,
+				blacks: SCH.array,
+				moderated: SCH.bool
+			},
+			state: {
+				lastSeen: SCH.number
+			}
 		},
 		action: async grabber => {
 			const lastSeen = grabber.state.lastSeen || 0;
 			const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
 
 			const tags = grabber.config.tags.join(" ~ ");
-			const black = grabber.config.black.join(" ~ ");
-			const white = mandatoryFilter.concat(grabber.config.white).join(" ");
+			const black = grabber.config.blacks.join(" ~ ");
+			const white = mandatoryFilter.concat(grabber.config.whites).join(" ");
 			const query = `{${tags}} -{${black}} ${white}`;
 
 			const params = buildURLParams({

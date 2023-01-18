@@ -6,6 +6,18 @@ function chunk(a, chunksize){
 	return r;
 }
 
+function fromTemplate(id){
+	return document.querySelector(`#${id}`).content.firstElementChild.cloneNode(true);
+}
+
+function safe(cb){
+	try {
+		return cb();
+	} catch(e){
+		return null;
+	}
+}
+
 function sleep(ms){
 	return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -1,6 +1,7 @@
 :root {
 	--accent: darkred;
 	--shy: rgba(255, 255, 255, .3);
+	--small-round: .42vw;
 }
 
 * {
@@ -65,8 +66,8 @@ img {
 	display: inline-block;
 	padding: .5vw 1.5vw .5vw 1.5vw;
 	border-width: 0;
-	border-bottom-width: .3vw;
-	border-radius: .3vw;
+	border-bottom-width: var(--small-round);
+	border-radius: var(--small-round);
 }
 
 .tab.selected {
@@ -75,7 +76,7 @@ img {
 }
 
 .button {
-	border-radius: .3vw;
+	border-radius: var(--small-round);
 	transition: background-color .7s;
 	cursor: pointer;
 }
@@ -137,6 +138,11 @@ img {
 	border-color: darkred;
 	border-style: solid;
 	border-width: .42vw;
+}
+
+.section {
+	background-color: rgba(0, 0, 0, .2);
+	border-radius: var(--small-round);
 }
 
 .hidden {

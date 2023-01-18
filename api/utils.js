@@ -1,4 +1,10 @@
-const https = require("https");
+import * as https from "https";
+import { pbkdf2Sync } from "node:crypto";
+
+export function hashPassword(raw){
+	const key = pbkdf2Sync(raw, "m1ku39", 7000, 64, "sha512");
+	return key.toString("hex");
+}
 
 export function safeParse(str){
 	try {
@@ -82,4 +88,28 @@ export function parseTelegramTarget(raw){
 export function escapeMarkdown(raw){
 	const substitutions = {'*': '\\*','#': '\\#','(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;'};
 	return raw.replace(/[\*\(\)\[\]\+\-\\_`#<>]/g, m => substitutions[m]);
+}
+
+export const SCH = {
+	any: 0,
+	string: 1,
+	number: 2,
+	bool: 3,
+	array: 4
+};
+
+export function validate(schema, obj){
+	const objProperties = Object.keys(obj);
+	return Object.keys(schema).every(skey => {
+		if (!objProperties.includes(skey)) return false;
+		if (typeof schema[skey] == "object") return validate(schema[skey], obj[skey]);
+		switch (schema[skey]){
+			case (SCH.any):    return true;
+			case (SCH.string): return typeof obj[skey] == "string";
+			case (SCH.number): return typeof obj[skey] == "number";
+			case (SCH.bool):   return typeof obj[skey] == "boolean";
+			case (SCH.array):  return Array.isArray(obj[skey]);
+			default: return true;
+		}
+	});
 }

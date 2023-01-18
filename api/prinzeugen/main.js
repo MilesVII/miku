@@ -1,4 +1,4 @@
-import { tg, tgReport, phetch, safeParse, getFileLength, parseTelegramTarget } from "../utils.js";
+import { tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate } from "../utils.js";
 import { grabbers } from "./grabbers.js";
 
 async function db(url, method, headers, body){
@@ -52,13 +52,6 @@ async function setGrabbers(user, token, grabbers){
 		return false;
 }
 
-const SCH = {
-	any: 0,
-	string: 1,
-	number: 2,
-	bool: 3,
-	array: 4
-};
 const schema = {
 	debug:{},
 	login: {
@@ -68,7 +61,7 @@ const schema = {
 	setGrabbers: {
 		user: SCH.number,
 		userToken: SCH.string,
-		grabbers: SCH.any
+		grabbers: SCH.array
 	},
 	getGrabbers: {
 		user: SCH.number,
@@ -100,24 +93,6 @@ const schema = {
 	}
 };
 
-const grabberSchemas = {
-	gelbooru: {
-		credentials: {
-			user: SCH.number,
-			token: SCH.string
-		},
-		config: {
-			tags: SCH.array,
-			white: SCH.array,
-			blacks: SCH.array,
-			moderated: SCH.bool
-		},
-		state: {
-			lastSeen: SCH.number
-		}
-	}
-};
-
 const messageSchema = [
 	{
 		version: SCH.number,
@@ -126,26 +101,11 @@ const messageSchema = [
 	}
 ];
 
-function validate(schema, obj){
-	const objProperties = Object.keys(obj);
-	return Object.keys(schema).every(skey => {
-		if (!objProperties.includes(skey)) return false;
-		if (typeof schema[skey] == "object") return validate(schema[skey], obj[skey]);
-		switch (schema[skey]){
-			case (SCH.any):    return true;
-			case (SCH.string): return typeof obj[skey] == "string";
-			case (SCH.number): return typeof obj[skey] == "number";
-			case (SCH.bool):   return typeof obj[skey] == "boolean";
-			case (SCH.array):  return Array.isArray(obj[skey]);
-			default: return true;
-		}
-	});
-}
-
 function validateGrabber(grabber){
+	const schema = grabbers[grabber?.type]?.schema;
 	return (
-		grabber.type && grabber.schema &&
-		validate(grabber.schema, grabber)
+		grabber.type && schema &&
+		validate(schema, grabber)
 	);
 }
 
@@ -174,7 +134,6 @@ async function sendMessage(message, token, target){
 		))).filter(link => link);
 
 		if (attachments.length > 0){
-			console.log(attachments);
 			const mediaGroup = attachments.map(link => ({
 				type: "photo",
 				media: link
@@ -217,17 +176,24 @@ export default async function handler(request, response) {
 		response.status(400).send("Invalid action schema");
 		return;
 	}
+	if (request.body.userToken) request.body.userToken = hashPassword(request.body.userToken);
+
 	switch (request.body.action){
 		case ("debug"): {
 			//const r = await db(`/rest/v1/pool?failed=eq.true`, "PATCH", null, {failed: false});
-			const r = await db(`/rest/v1/pool?user=eq.1`, "PATCH", null, {target: "-1001599644614"});
+			//const r = await db(`/rest/v1/pool?user=eq.1`, "PATCH", null, {target: "-1001599644614"});
 			
-			response.status(200).send(r);
+			response.status(200).send();
 			return;
 		}
 		case ("login"): {
-			const success = await userAccessAllowed(request.body.user, request.body.userToken);
-			response.status(success ? 200 : 401).send();
+			const userData = await db(`/rest/v1/users?id=eq.${request.body.user}`);
+			if (userData?.length > 0 && userData[0]["access_token"] == request.body.userToken){
+				userData[0]["access_token"] = null;
+				response.status(200).send(userData[0]);
+			} else {
+				response.status(401).send(null);
+			}
 			return;
 		}
 		case ("getGrabbers"): {
@@ -244,10 +210,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("setGrabbers"): {
-			if (!Array.isArray(request.body.grabbers)) {
-				response.status(400).send("Invalid action schema: 'grabbers' must be an array");
-				return;
-			}
 			const invalidGrabbers = request.body.grabbers.filter(g => !validateGrabber(g));
 			if (invalidGrabbers.length > 0) {
 				response.status(400).send(invalidGrabbers);
@@ -265,7 +227,6 @@ export default async function handler(request, response) {
 				{"Range": "0-100"},
 				null
 			);
-			console.log(messages);
 			response.status(200).send(messages);
 			return;
 		}

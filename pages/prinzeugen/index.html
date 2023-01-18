@@ -13,7 +13,65 @@
 		<link rel="stylesheet" href="styles/toast.css"/>
 	</head>
 	<body>
-		<div id="curtain" class="hidden" style="opacity:0;">Processing request</div>
+		<template id="remove_grabber">
+			<div class="settingsRow">
+				<div class="button wideButton">Remove grabber</div>
+			</div>
+		</template>
+		<template id="grabber_gelbooru">
+			<div class="section">
+				<div class="settingsRow">
+					<span class="settingsColumn">
+						Gelbooru user
+					</span>
+					<span class="settingsColumn">
+						<input type="number" id="gb_user" class="wide"></input>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">
+						Gelbooru API key
+					</span>
+					<span class="settingsColumn">
+						<input type="text" id="gb_key" class="wide"></input>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">Tags</span>
+					<span class="settingsColumn">
+						<textarea id="gb_tags" class="wide"></textarea>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">Blacklist</span>
+					<span class="settingsColumn">
+						<textarea id="gb_blacks" class="wide"></textarea>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">Whitelist & filters</span>
+					<span class="settingsColumn">
+						<textarea id="gb_whites" class="wide" placeholder="sort:id:asc and id:>lastseen are added autmoatically"></textarea>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">Moderated</span>
+					<span class="settingsColumn">
+						<input type="checkbox" id="gb_moderated" class="wide" checked></input>
+					</span>
+				</div>
+				<div class="settingsRow">
+					<span class="settingsColumn">
+						Last checked post ID
+					</span>
+					<span class="settingsColumn">
+						<input type="number" id="gb_last" class="wide" value="0"></input>
+					</span>
+				</div>
+			</div>
+		</template>
+
+		<div id="curtain" class="hidden" style="opacity:0;"></div>
 		<div id="login">
 			<input type="number" id="login_id" class="wide" placeholder="User ID"></input>
 			<input type="text" id="login_token" class="wide" placeholder="Access token"></input>
@@ -21,65 +79,37 @@
 		</div>
 		<div id="authorized" class="hidden">
 			<div id="tabbar">
-				<span data-target="dnl" class="tab button">Dashboard</span>
-				<span data-target="rjd" class="tab button">Manual</span>
-				<span data-target="pdg" class="tab button">Moderation</span>
+				<span data-target="gbs" class="tab button">Grabbers</span>
+				<span data-target="mnl" class="tab button">Manual</span>
+				<span data-target="mdr" class="tab button">Moderation</span>
 				<span data-target="stg" class="tab button">Settings</span>
 			</div>
 			<div id="main">
-				<div id="dnl" class="page hidden">
-					<div id="dlConfig">
-						<div class="settingsRow">
-							<span class="settingsColumn">Tags</span>
-							<span class="settingsColumn">
-								<textarea id="main_tags" class="wide"></textarea>
-							</span>
-						</div>
-						<div class="settingsRow">
-							<span class="settingsColumn">Blacklist</span>
-							<span class="settingsColumn">
-								<textarea id="main_black" class="wide"></textarea>
-							</span>
-						</div>
-						<div class="settingsRow">
-							<span class="settingsColumn">Whitelist & filters</span>
-							<span class="settingsColumn">
-								<textarea id="main_white" class="wide"></textarea>
-							</span>
-						</div>
-						<div class="settingsRow">
-							<div class="button wideButton" onclick="downloadPosts()">Download all posts</div>
-							<div class="button wideButton" onclick="saveConfig()">Save config</div>
-						</div>
-					</div>
-					<input type="text" id="exchange" class="wide"></input>
+				<div id="gbs" class="tabtarget page hidden">
+					<div id="grabbersList"></div>
 					<div class="settingsRow">
-						<div class="button wideButton" onclick="loadState()">Load state</div>
-						<div class="button wideButton" onclick="saveState()">Save state</div>
+						<div class="button wideButton" onclick="saveGrabbers()">Save grabbers</div>
 					</div>
 				</div>
 
-				<div id="pdg" class="page hidden"></div>
+				<div id="mnl" class="tabtarget page hidden"></div>
+				<div id="mdr" class="tabtarget page hidden"></div>
 
-				<div id="apd" class="page hidden"></div>
-				
-				<div id="rjd" class="page hidden"></div>
-				
-				<div id="stg" class="page hidden">
+				<div id="stg" class="tabtarget page hidden">
 					<div class="settingsRow">
 						<span class="settingsColumn">
-							Gelbooru API key
+							Access token
 						</span>
 						<span class="settingsColumn">
-							<input type="text" id="gel_key" class="wide"></input>
+							<input type="text" id="stg_access" class="wide" placeholder="Leave empty to keep old token"></input>
 						</span>
 					</div>
 					<div class="settingsRow">
 						<span class="settingsColumn">
-							Gelbooru user id
+							Telegram bot token
 						</span>
 						<span class="settingsColumn">
-							<input type="text" id="gel_user" class="wide"></input>
+							<input type="text" id="stg_tg" class="wide"></input>
 						</span>
 					</div>
 					<div id="stg_save" class="button wideButton">Save</div>
@@ -92,6 +122,7 @@
 		<script src="js/io.js"></script>
 		<script src="js/utils.js"></script>
 		<script src="js/elbuilder.js"></script>
+		<script src="js/grabbers.js"></script>
 		<script src="js/main.js"></script>
 	</body>
 </html>
