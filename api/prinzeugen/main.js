@@ -1,5 +1,5 @@
 import { chunk, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate } from "../utils.js";
-import { grabbers } from "./grabbers.js";
+import { grabbers, grabbersMeta } from "./grabbers.js";
 
 async function db(url, method, headers, body){
 	return safeParse(
@@ -16,12 +16,13 @@ async function db(url, method, headers, body){
 
 async function grab(user, token){
 	let grabbers = await getGrabbers(user, token);
+	console.log(grabbers[0].state.lastSeen);
 
-	const results = await Promise.allSettled(grabbers.map(g => g.action()));
+	const results = await Promise.all(grabbers.map(g => grabbersMeta[g.type].action(g)));
 	const messages = results.reduce((p, c) => p.concat(c), []);
 	
-	console.log(grabbers);
-	console.log(messages);
+	console.log(grabbers[0].state.lastSeen);
+	console.log(messages.length);
 }
 
 async function getGrabbers(user, token){
@@ -133,11 +134,14 @@ async function sendMessage(message, token, target){
 			.filter(l => l.length > 0);
 		
 		if (imageVariants.length > 0){
-			const l = await getFileLength(imageVariants[0]);
+			const status = {debug: null};
+			const l = await getFileLength(imageVariants[0], status);
+			let firstSkipped = false;
 
 			let fatto = false;
 			let image = imageVariants[0];
 			if (l > 7 * 1024 * 1024){
+				firstSkipped = true;
 				if (imageVariants[1]){
 					image = imageVariants[1];
 				} else {
@@ -155,7 +159,7 @@ async function sendMessage(message, token, target){
 
 			if (fatto){
 				//Todo: try resizing the fattos on my side
-				tgResponse = "Fatto!";
+				tgResponse = {e: "Fatto!"};
 			} else {
 				tgResponse = safeParse(await tg("sendPhoto", {
 					chat_id: target,
@@ -164,6 +168,11 @@ async function sendMessage(message, token, target){
 						inline_keyboard: chunk(links, 2)
 					}
 				}, token)) || {};
+			}
+			tgResponse.prinz = {
+				length: l,
+				firstSkipped: firstSkipped,
+				status: status.debug
 			}
 			sent = !!tgResponse?.ok;
 		} else if (message.attachments.length == 0){

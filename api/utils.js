@@ -26,10 +26,11 @@ export function chunk(a, chunksize){
 	return r;
 }
 
-export function getFileLength(url){
+export function getFileLength(url, status = {}){
 	return new Promise(resolve => {
 		const req = https.request(url, {method: "HEAD"}, res => {
 			try {
+				status.debug = res.statusCode;
 				resolve(parseInt(res.headers["content-length"], 10) || "0");
 			} catch (e) {
 				resolve(Infinity);
@@ -60,6 +61,10 @@ export function phetch(url, options = {}, payload){
 
 		req.end()
 	});
+}
+
+export function dl(url){
+
 }
 
 export function tg(command, payload, token = process.env.TG_TOKEN){
