@@ -140,7 +140,7 @@ async function sendMessage(message, token, target){
 
 			let fatto = false;
 			let image = imageVariants[0];
-			if (l > 7 * 1024 * 1024){
+			if (l > 5 * 1024 * 1024){
 				firstSkipped = true;
 				if (imageVariants[1]){
 					image = imageVariants[1];
