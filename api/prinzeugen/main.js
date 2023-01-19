@@ -1,4 +1,4 @@
-import { tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate } from "../utils.js";
+import { chunk, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate } from "../utils.js";
 import { grabbers } from "./grabbers.js";
 
 async function db(url, method, headers, body){
@@ -127,24 +127,44 @@ async function sendMessage(message, token, target){
 	let tgResponse;
 
 	if (message.version == 0){
-		message.attachments = message.attachments.slice(0, 2).filter(l => l.length > 0);
+		const imageVariants = 
+			message.attachments[0]
+			.slice(0, 2)
+			.filter(l => l.length > 0);
+		
+		if (imageVariants.length > 0){
+			const l = await getFileLength(imageVariants[0]);
 
-		const attachments = (await Promise.all(message.attachments.map(linkSet =>
-			slowFind(linkSet, async link => (await getFileLength(link)) < 9*1024*1024)
-		))).filter(link => link);
+			let fatto = false;
+			let image = imageVariants[0];
+			if (l > 7 * 1024 * 1024){
+				if (imageVariants[1]){
+					image = imageVariants[1];
+				} else {
+					fatto = true;
+				}
+			}
 
-		if (attachments.length > 0){
-			const mediaGroup = attachments.map(link => ({
-				type: "photo",
-				media: link
-			}));
-			mediaGroup[0].caption = message.caption;
-			mediaGroup[0].parse_mode = "MarkdownV2";
-			
-			tgResponse = safeParse(await tg("sendMediaGroup", {
-				chat_id: target,
-				media: mediaGroup
-			}, token)) || {};
+			const links = [
+				{text: "Gelbooru", url: message.raw.link},
+				{text: "Source", url: message.raw.source || null},
+			].filter(i => i.url).concat(message.raw.artists.map(a => ({
+				text: `🎨 ${a}`,
+				url: `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`
+			})));
+
+			if (fatto){
+				//Todo: try resizing the fattos on my side
+				tgResponse = "Fatto!";
+			} else {
+				tgResponse = safeParse(await tg("sendPhoto", {
+					chat_id: target,
+					photo: image,
+					reply_markup: {
+						inline_keyboard: chunk(links, 2)
+					}
+				}, token)) || {};
+			}
 			sent = !!tgResponse?.ok;
 		} else if (message.attachments.length == 0){
 			tgResponse = safeParse(await tg("sendMessage", {
@@ -180,10 +200,8 @@ export default async function handler(request, response) {
 
 	switch (request.body.action){
 		case ("debug"): {
-			//const r = await db(`/rest/v1/pool?failed=eq.true`, "PATCH", null, {failed: false});
-			//const r = await db(`/rest/v1/pool?user=eq.1`, "PATCH", null, {target: "-1001599644614"});
-			
-			response.status(200).send();
+			const r = null;
+			response.status(200).send(r);
 			return;
 		}
 		case ("login"): {

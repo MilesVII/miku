@@ -18,6 +18,14 @@ export function last(arr){
 	return arr[arr.length - 1];
 }
 
+export function chunk(a, chunksize){
+	let r = [];
+	for (let i = 0; i < a.length; i += chunksize){
+		r.push(a.slice(i, i + chunksize));
+	}
+	return r;
+}
+
 export function getFileLength(url){
 	return new Promise(resolve => {
 		const req = https.request(url, {method: "HEAD"}, res => {
