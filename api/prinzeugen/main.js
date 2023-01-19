@@ -177,6 +177,7 @@ async function sendMessage(message, token, target){
 						tgUploadPhoto(image, target, {inline_keyboard: chunk(links, 2)}, token)
 					]);
 					const retryResponse = safeParse(result[1]) || {};
+					if (retryResponse?.ok) tgResponse.ok = true;
 					tgResponse.retried = retryResponse;
 				}
 			}
@@ -287,7 +288,8 @@ export default async function handler(request, response) {
 			//User can inject filters by abusing target or id properties, but the result of query will be processed on server anyways
 			const targetFilter = request.body.target ? "&target=eq." + request.body.target : "";
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
-			const url = `/rest/v1/pool?failed=eq.false&approved=eq.true&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
+			const failFilter = idFilter ? "" : "&failed=eq.false";
+			const url = `/rest/v1/pool?approved=eq.true${failFilter}&user=eq.${request.body.user}${targetFilter}${idFilter}&select=*,users!inner(tg_token,access_token)`;
 
 			let availablePosts = await db(url);
 
