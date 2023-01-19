@@ -172,7 +172,11 @@ async function sendMessage(message, token, target){
 				}, token)) || {};
 
 				if (JSON.stringify(tgResponse).includes("failed to get HTTP URL content")){
-					const retryResponse = safeParse(await tgUploadPhoto(image, target, {inline_keyboard: chunk(links, 2)}, token)) || {};
+					const result = await Promise.all([
+						tgReport(`Retried`),
+						tgUploadPhoto(image, target, {inline_keyboard: chunk(links, 2)}, token)
+					]);
+					const retryResponse = safeParse(result[1]) || {};
 					tgResponse.retried = retryResponse;
 				}
 			}
