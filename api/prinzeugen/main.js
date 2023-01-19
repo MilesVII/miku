@@ -1,4 +1,4 @@
-import { chunk, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate } from "../utils.js";
+import { chunk, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
 import { grabbers, grabbersMeta } from "./grabbers.js";
 
 async function db(url, method, headers, body){
@@ -149,6 +149,8 @@ async function sendMessage(message, token, target){
 				}
 			}
 
+			if (!message.raw.source?.startsWith("http")) message.raw.source = null;
+
 			const links = [
 				{text: "Gelbooru", url: message.raw.link},
 				{text: "Source", url: message.raw.source || null},
@@ -168,6 +170,11 @@ async function sendMessage(message, token, target){
 						inline_keyboard: chunk(links, 2)
 					}
 				}, token)) || {};
+
+				if (JSON.stringify(tgResponse).includes("failed to get HTTP URL content")){
+					const retryResponse = safeParse(await tgUploadPhoto(image, target, {inline_keyboard: chunk(links, 2)}, token)) || {};
+					tgResponse.retried = retryResponse;
+				}
 			}
 			tgResponse.prinz = {
 				length: l,
