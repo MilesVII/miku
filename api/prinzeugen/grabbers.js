@@ -1,9 +1,42 @@
-import { last, phetch, escapeMarkdown, safeParse, SCH } from "../utils.js";
+import { last, phetch, escapeMarkdown, safeParse, SCH, unique, range } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
 		.map(k => `${k}=${encodeURIComponent(params[k])}`)
 		.join("&");
+}
+
+async function glbFilterArtists(allTags, u, t){
+	const paramsPrototype = {
+		api_key: t,
+		user_id: u,
+		page: "dapi",
+		s: "tag",
+		q: "index",
+		pid: 0,
+		json: 1,
+		names: allTags.join(" ")
+	};
+	let tagsParams = buildURLParams(paramsPrototype);
+	let tagsUrl = `https://gelbooru.com/index.php?${tagsParams}`;
+
+	let tagsResponse = safeParse(await phetch(tagsUrl)) || {};
+	if (!tagsResponse["@attributes"]) return null;
+
+	const pageCount = Math.ceil(tagsResponse["@attributes"].count / tagsResponse["@attributes"].limit)
+	const pageRange = range(1, pageCount);
+	const additionals = await Promise.all(pageRange.map(async page => {
+		paramsPrototype.pid = page;
+		const params = buildURLParams(paramsPrototype);
+		const url = `https://gelbooru.com/index.php?${params}`;
+		return safeParse(await phetch(url)) || {};
+	}));
+
+	additionals.forEach(pack => tagsResponse.tag = tagsResponse.tag.concat(pack.tag));
+	const artists = tagsResponse.tag.filter(t => t.type == 1).map(t => t.name);
+
+	console.log(artists);
+	return artists;
 }
 
 export const grabbersMeta = {
@@ -59,27 +92,15 @@ export const grabbersMeta = {
 				artists: grabber.config.tags.filter(a => raw.tags.includes(a))
 			}));
 
+			const allTags = unique(posts.map(p => p.tags).reduce((p, c) => p.concat(c), []));
+			const allArtists = await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
+			if (allArtists)
+				posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
+
+			console.log(posts.map(p => p.artists));
+
 			if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
 
-			// function caption(post){
-			// 	const emd = escapeMarkdown;
-			// 	const gbSource = `[gb](${post.link})`;
-			// 	const originalSource = post.source ? ` [src](${emd(post.source)})` : "";
-			// 	const artists = post.artists
-			// 		.map(
-			// 			a => `[${emd(a)}](https://gelbooru.com/index.php?page=post&s=list&tags=${emd(encodeURIComponent(a))})`
-			// 		)
-			// 		.join(" & ");
-			// 	return `${gbSource}${originalSource}\n${artists}`;
-			// }
-
-			// const messages = posts.map(p => ({
-			// 	raw: p,
-			// 	attachments: [p.links],
-			// 	caption: caption(p),
-			// 	version: 0
-			// }));
-			
 			const messages = posts.map(p => ({
 				version: 1,
 				raw: p,
@@ -93,7 +114,7 @@ export const grabbersMeta = {
 							url: `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`
 						}))
 					)
-			}))
+			}));
 
 			return messages;
 		}

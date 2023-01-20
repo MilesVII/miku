@@ -14,60 +14,88 @@
 	</head>
 	<body>
 		<template id="remove_grabber">
-			<div class="settingsRow">
+			<div class="row flexCenter">
 				<div class="button wideButton">Remove grabber</div>
 			</div>
 		</template>
 		<template id="grabber_gelbooru">
 			<div class="section">
-				<div class="settingsRow">
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">
 						Gelbooru user
 					</span>
-					<span class="settingsColumn">
+					<span class="col halfWide">
 						<input type="number" id="gb_user" class="wide"></input>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">
 						Gelbooru API key
 					</span>
-					<span class="settingsColumn">
+					<span class="col halfWide">
 						<input type="text" id="gb_key" class="wide"></input>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">Tags</span>
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">Tags</span>
+					<span class="col halfWide">
 						<textarea id="gb_tags" class="wide"></textarea>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">Blacklist</span>
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">Blacklist</span>
+					<span class="col halfWide">
 						<textarea id="gb_blacks" class="wide"></textarea>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">Whitelist & filters</span>
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">Whitelist & filters</span>
+					<span class="col halfWide">
 						<textarea id="gb_whites" class="wide" placeholder="sort:id:asc and id:>lastseen are added autmoatically"></textarea>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">Moderated</span>
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">Moderated</span>
+					<span class="col halfWide">
 						<input type="checkbox" id="gb_moderated" class="wide" checked></input>
 					</span>
 				</div>
-				<div class="settingsRow">
-					<span class="settingsColumn">
+				<div class="row flexCenter">
+					<span class="col halfWide">
 						Last checked post ID
 					</span>
-					<span class="settingsColumn">
+					<span class="col halfWide">
 						<input type="number" id="gb_last" class="wide" value="0"></input>
 					</span>
 				</div>
+			</div>
+		</template>
+		<template id="moderation_item">
+			<div class="section row previewSection">
+				<a target="_blank"><img class="previewImage" src="" /></a>
+				<div class="col">
+					<div class="row"></div>
+					<div class="row">
+						<span class="button"></span>
+						<span class="button"></span>
+					</div>
+				</div>
+			</div>
+		</template>
+		<template id="moderation_tag">
+			<span class="tag"></span>
+		</template>
+		<template id="manual_link">
+			<div class="row flexCenter link">
+				<span class="col halfWide">
+					<input type="text" id="mnl_caption" class="wide" placeholder="Source caption"></input>
+				</span>
+				<span class="col halfWide">
+					<input type="text" id="mnl_link" class="wide" placeholder="URL"></input>
+				</span>
+				<span>
+					<div class="button">X</div>
+				</span>
 			</div>
 		</template>
 
@@ -78,7 +106,7 @@
 			<div class="button wideButton" onclick="login()">Login</div>
 		</div>
 		<div id="authorized" class="hidden">
-			<div id="tabbar">
+			<div class="tabbar">
 				<span data-target="gbs" class="tab button">Grabbers</span>
 				<span data-target="mnl" class="tab button">Manual</span>
 				<span data-target="mdr" class="tab button">Moderation</span>
@@ -86,33 +114,80 @@
 			</div>
 			<div id="main">
 				<div id="gbs" class="tabtarget page hidden">
+					<div class="row flexCenter">
+						<div class="button" onclick="addGrabber('gelbooru')">Gelbooru</div>
+					</div>
 					<div id="grabbersList"></div>
-					<div class="settingsRow">
+					<div class="row flexCenter">
 						<div class="button wideButton" onclick="saveGrabbers()">Save grabbers</div>
 					</div>
 				</div>
 
-				<div id="mnl" class="tabtarget page hidden"></div>
+				<div id="mnl" class="tabtarget page hidden">
+					
+					<div class="tabbar">
+						<span data-target="mnl_glb" class="tab button">Gelbooru</span>
+						<span data-target="mnl_any" class="tab button">Any</span>
+					</div>
+					<div>
+						<div id="mnl_glb" class="tabtarget hidden">
+							<div class="section">
+								<div class="row flexCenter">
+									<span class="col halfWide">
+										List of post ids
+									</span>
+									<span class="col halfWide">
+										<textarea id="gb_whites" class="wide" placeholder="sort:id:asc and id:>lastseen are added autmoatically"></textarea>
+									</span>
+								</div>
+								<div id="mnl_linklist"></div>
+								<div class="row flexCenter">
+									<div class="button" onclick="addLinkToManual()">Add link</div>
+								</div>
+							</div>
+						</div>
+						<div id="mnl_any" class="tabtarget hidden">
+							<div class="section">
+								<div class="row flexCenter">
+									<span class="col halfWide">
+										Image source
+									</span>
+									<span class="col halfWide">
+										<input type="text" id="mnl_source" class="wide" placeholder=""></input>
+									</span>
+								</div>
+								<div id="mnl_linklist"></div>
+								<div class="row flexCenter">
+									<div class="button" onclick="addLinkToManual()">Add link</div>
+								</div>
+							</div>
+							<div class="button wideButton" onclick="postManual()">Schedule post</div>
+						</div>
+					</div>
+				</div>
+
 				<div id="mdr" class="tabtarget page hidden"></div>
 
 				<div id="stg" class="tabtarget page hidden">
-					<div class="settingsRow">
-						<span class="settingsColumn">
+					<div class="row flexCenter">
+						<span class="col halfWide">
 							Access token
 						</span>
-						<span class="settingsColumn">
+						<span class="col halfWide">
 							<input type="text" id="stg_access" class="wide" placeholder="Leave empty to keep old token"></input>
 						</span>
 					</div>
-					<div class="settingsRow">
-						<span class="settingsColumn">
+					<div class="row flexCenter">
+						<span class="col halfWide">
 							Telegram bot token
 						</span>
-						<span class="settingsColumn">
+						<span class="col halfWide">
 							<input type="text" id="stg_tg" class="wide"></input>
 						</span>
 					</div>
-					<div id="stg_save" class="button wideButton">Save</div>
+					<div class="button wideButton" onclick="saveSettings()">Save</div>
+					
+					<div class="button wideButton" onclick="signOut()">Sign out</div>
 				</div>
 
 				<div id="statuslog"></div>

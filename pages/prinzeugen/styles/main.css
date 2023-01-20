@@ -2,6 +2,7 @@
 	--accent: darkred;
 	--shy: rgba(255, 255, 255, .3);
 	--small-round: .42vw;
+	--small-space: .5vw;
 }
 
 * {
@@ -49,7 +50,7 @@ img {
 	align-content: center;
 }
 
-#tabbar {
+.tabbar {
 	display: flex;
 	flex-flow: row nowrap;
 	justify-content: center;
@@ -75,7 +76,15 @@ img {
 	border-color: var(--accent);
 }
 
+.tag {
+	padding: var(--small-space);
+	margin: var(--small-space);
+	border-radius: var(--small-round);
+}
+
 .button {
+	padding: var(--small-space);
+	margin: var(--small-space);
 	border-radius: var(--small-round);
 	transition: background-color .7s;
 	cursor: pointer;
@@ -104,45 +113,56 @@ img {
 	justify-content: center;
 }
 
-.settingsRow {
+.row {
 	display: flex;
 	margin: 0 2% 1vw 2%;
 	flex-flow: row nowrap;
-	justify-content: center;
 	align-items: baseline;
 	width: 90%
 }
 
-.settingsColumn {
+.flexCenter {
+	justify-content: center;
+}
+
+.col {
 	margin-left: 2%;
-	width: 45%;
 	text-align: right;
 }
 
+.halfWide {
+	width: 45%;
+}
+
 .wideButton {
-	padding: .5vw;
-	margin: .1vw;
+	padding: var(--small-space);;
+	margin: var(--small-space);;
 	min-width: 10vw;
 	text-align: center;
-}
-
-.preview {
-	background-color: lightsalmon;
-}
-
-.previewAnimated {
-	background-color: mediumslateblue;
-}
-
-.previewSelected {
-	border-color: darkred;
-	border-style: solid;
-	border-width: .42vw;
 }
 
 .section {
 	background-color: rgba(0, 0, 0, .2);
 	border-radius: var(--small-round);
+}
+
+.approved {
+	background-color: hsla(1000, 72%, 23%, .42);
+}
+
+.rejected {
+	background-color: hsla(0, 72%, 23%, .42);
+}
+
+.previewSection {
+	align-items: start;
+}
+
+.previewImage {
+	width: 30%;
+	max-height: 32vh;
+	border-radius: var(--small-round);
+	margin: var(--small-space);
 }
 
 .hidden {

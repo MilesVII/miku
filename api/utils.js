@@ -7,6 +7,14 @@ export function hashPassword(raw){
 	return key.toString("hex");
 }
 
+export function safe(cb){
+	try {
+		return cb();
+	} catch(e){
+		return null;
+	}
+}
+
 export function safeParse(str){
 	try {
 		return JSON.parse(str);
@@ -19,6 +27,17 @@ export function last(arr){
 	return arr[arr.length - 1];
 }
 
+export function unique(arr){
+	return arr.filter((v, i, a) => !a.slice(i + 1).find(x => x == v))
+}
+
+export function range(from, to){
+	const r = [];
+	for (let i = from; i < to; ++i)
+		r.push(i);
+	return r;
+}
+
 export function chunk(a, chunksize){
 	let r = [];
 	for (let i = 0; i < a.length; i += chunksize){
@@ -27,14 +46,19 @@ export function chunk(a, chunksize){
 	return r;
 }
 
-export function getFileLength(url, status = {}){
+export function getFileLength(url){
 	return new Promise(resolve => {
 		const req = https.request(url, {method: "HEAD"}, res => {
 			try {
-				status.debug = res.statusCode;
-				resolve(parseInt(res.headers["content-length"], 10) || "0");
+				resolve({
+					length: parseInt(res.headers["content-length"], 10) || "0",
+					status: res.statusCode
+				});
 			} catch (e) {
-				resolve(Infinity);
+				resolve({
+					length: Infinity,
+					status: res.statusCode
+				});
 			}
 		});
 
