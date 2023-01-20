@@ -124,7 +124,8 @@ async function authorize(userData){
 
 	document.querySelector("#stg_tg").value = userData.tg_token;
 
-	loadGrabbers(userData.grabbers)
+	loadGrabbers(userData.grabbers);
+	loadModerables(userData.moderables);
 }
 
 async function login(){
@@ -200,17 +201,25 @@ function addGrabber(type){
 	list.appendChild(proto);
 }
 
-function renderModerable(message, index){
+function loadModerables(messages){
+	const mod_list = document.querySelector("#mdr_list");
+	mod_list.innerHTML = "";
+	messages.forEach(m => {
+		mod_list.appendChild(renderModerable(m.message, m.id));
+	});
+}
+
+function renderModerable(message, id){
 	//Message version 1 expected
 	if (message.version != 1){
 		console.error("Unsupported message version");
 		return;
 	}
 	const proto = fromTemplate("moderation_item");
-	proto.dataset.index = index;
+	proto.dataset.id = id;
 
-	proto.querySelector("a").href = post.image[0];
-	proto.querySelector("img").src = post.image[1] || post.image[0];
+	proto.querySelector("a").href = message.image[0];
+	proto.querySelector("img").src = message.raw?.preview || message.image[1] || message.image[0];
 
 	const tagList = proto.querySelector(".row");
 	function renderTag(text, color){
@@ -224,19 +233,36 @@ function renderModerable(message, index){
 	if (message?.raw?.artists)
 		message.raw.artists.forEach(artist => tagList.appendChild(renderTag(`🎨 ${artist}`, "rgba(250, 250, 250, .7")));
 
-	const buttons = proto.querySelector(".button");
+	const buttons = proto.querySelectorAll(".button");
 	buttons[0].textContent = "Approve";
 	buttons[0].addEventListener("click", () => {
 		proto.classList.remove("rejected");
 		proto.classList.add("approved");
 	});
-	buttons[1].textContent = "Approve";
+	buttons[1].textContent = "Reject";
 	buttons[1].addEventListener("click", () => {
-		proto.classList.remove("rejected");
-		proto.classList.add("approved");
+		proto.classList.add("rejected");
+		proto.classList.remove("approved");
 	});
 
 	return proto;
+}
+
+async function moderate(){
+	const decisions = Array.from(document.querySelectorAll(".previewSection"))
+		.filter(e => e.classList.contains("approved") || e.classList.contains("rejected"))
+		.map(e => ({
+			id: parseInt(e.dataset.id, 10),
+			approved: e.classList.contains("approved")
+		}));
+
+	if (decisions.length == 0) return;
+
+	pullCurtain(true);
+	const newModerables = await callAPI("moderate", {decisions: decisions}, true);
+	
+	loadModerables(newModerables.data);
+	pullCurtain(false);
 }
 
 function report(msg){

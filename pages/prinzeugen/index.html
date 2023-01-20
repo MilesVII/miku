@@ -72,7 +72,7 @@
 		</template>
 		<template id="moderation_item">
 			<div class="section row previewSection">
-				<a target="_blank"><img class="previewImage" src="" /></a>
+				<a class="previewImage" target="_blank"><img loading="lazy" /></a>
 				<div class="col">
 					<div class="row"></div>
 					<div class="row">
@@ -166,7 +166,10 @@
 					</div>
 				</div>
 
-				<div id="mdr" class="tabtarget page hidden"></div>
+				<div id="mdr" class="tabtarget page hidden">
+					<div class="button wideButton" onclick="moderate()">Moderate</div>
+					<div id="mdr_list"></div>
+				</div>
 
 				<div id="stg" class="tabtarget page hidden">
 					<div class="row flexCenter">

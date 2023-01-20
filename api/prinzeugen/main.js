@@ -1,6 +1,61 @@
 import { chunk, safe, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
 import { grabbers, grabbersMeta } from "./grabbers.js";
 
+const schema = {
+	debug:{},
+	login: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	setGrabbers: {
+		user: SCH.number,
+		userToken: SCH.string,
+		grabbers: SCH.array
+	},
+	getGrabbers: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	grab: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	getModerable: {
+		user: SCH.number,
+		userToken: SCH.string
+	},
+	moderate: {
+		user: SCH.number,
+		userToken: SCH.string,
+		decisions: SCH.array
+	},
+	post: {
+		user: SCH.number,
+		userToken: SCH.string,
+		messages: SCH.array,
+		target: SCH.string
+	},
+	publish: {
+		user: SCH.number,
+		userToken: SCH.string,
+		target: SCH.string
+		//id can also be specified
+	}
+};
+
+const messageSchema = [
+	{//0, deprecated version, publisher depends on it's 'raw' property to convert to newer version
+		version: SCH.number,
+		attachments: SCH.array,
+		caption: SCH.string
+	},
+	{//1
+		version: SCH.number,
+		image: SCH.array,
+		links: SCH.array
+	}
+];
+
 async function db(url, method, headers, body){
 	return safeParse(
 		await phetch(`${process.env.PE_DB_URL}${url}`, {
@@ -15,14 +70,40 @@ async function db(url, method, headers, body){
 }
 
 async function grab(user, token){
+	function flatten(arr){
+		return arr.reduce((p, c) => p.concat(c), []);
+	}
+
 	let grabbers = await getGrabbers(user, token);
 	console.log(grabbers[0].state.lastSeen);
 
-	const results = await Promise.all(grabbers.map(g => grabbersMeta[g.type].action(g)));
-	const messages = results.reduce((p, c) => p.concat(c), []);
+	let moderated = [];
+	let approved = [];
+	for (const grabber of grabbers){
+		const prom = grabbersMeta[grabber.type].action(grabber);
+
+		if (grabber.config.moderated) 
+			moderated.push(prom);
+		else
+			approved.push(prom);
+	}
 	
-	console.log(grabbers[0].state.lastSeen);
-	console.log(messages.length);
+	const entries0 = flatten(await Promise.all(moderated)).map(message => ({
+		message: message,
+		user: user,
+		failed: false,
+		approved: null
+	}));
+	
+	const entries1 = flatten(await Promise.all(approved)).map(message => ({
+		message: message,
+		user: user,
+		failed: false,
+		approved: true
+	}));
+
+	await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries0.concat(entries1));
+	await setGrabbers(user, token, grabbers);
 }
 
 async function getGrabbers(user, token){
@@ -52,73 +133,25 @@ async function setGrabbers(user, token, grabbers){
 		return false;
 }
 
-const schema = {
-	debug:{},
-	login: {
-		user: SCH.number,
-		userToken: SCH.string
-	},
-	setGrabbers: {
-		user: SCH.number,
-		userToken: SCH.string,
-		grabbers: SCH.array
-	},
-	getGrabbers: {
-		user: SCH.number,
-		userToken: SCH.string
-	},
-	grab: {
-		user: SCH.number,
-		userToken: SCH.string
-	},
-	getModerable: {
-		user: SCH.number,
-		userToken: SCH.string
-	},
-	moderate: {
-		user: SCH.number,
-		userToken: SCH.string,
-		messages: SCH.array
-	},
-	post: {
-		user: SCH.number,
-		userToken: SCH.string,
-		messages: SCH.array,
-		target: SCH.string
-	},
-	publish: {
-		user: SCH.number,
-		userToken: SCH.string,
-		target: SCH.string
-		//id can also be specified
-	}
-};
-
-const messageSchema = [
-	{//0, deprecated version, publisher depends on it's 'raw' property to convert to newer version
-		version: SCH.number,
-		attachments: SCH.array,
-		caption: SCH.string
-	},
-	{//1
-		version: SCH.number,
-		image: SCH.array,
-		links: SCH.array
-	}
-];
-
 function validateGrabber(grabber){
-	const schema = grabbers[grabber?.type]?.schema;
+	const schema = grabbersMeta[grabber?.type]?.schema;
 	return (
 		grabber.type && schema &&
 		validate(schema, grabber)
 	);
 }
 
-async function userAccessAllowed(id, token){
-	const user = safeParse(
-		await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null)
+function getModerables(user){
+	return db(
+		`/rest/v1/pool?approved=is.null&user=eq.${user}&select=*`,
+		"GET",
+		{"Range": "0-100"},
+		null
 	);
+}
+
+async function userAccessAllowed(id, token){
+	const user = await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null);
 	return user && user[0] && user[0]["access_token"] == token;
 }
 
@@ -220,6 +253,7 @@ export default async function handler(request, response) {
 			const userData = await db(`/rest/v1/users?id=eq.${request.body.user}`);
 			if (userData?.length > 0 && userData[0]["access_token"] == request.body.userToken){
 				userData[0]["access_token"] = null;
+				userData[0].moderables = await getModerables(request.body.user, request.body.userToken);
 				response.status(200).send(userData[0]);
 			} else {
 				response.status(401).send(null);
@@ -251,17 +285,28 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("getModerables"): {
-			const messages = await db(
-				`/rest/v1/pool?approved=eq.false&user=eq.${request.body.user}&users!inner(access_token)=eq.${request.body.userToken}&select=*`,
-				"GET",
-				{"Range": "0-100"},
-				null
-			);
+			const messages = await getModerables(request.body.user, request.body.userToken);
 			response.status(200).send(messages);
 			return;
 		}
 		case ("moderate"): {
-			response.status(501).send();
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+			
+			const decisionSchema = {
+				id: SCH.number,
+				approved: SCH.bool
+			};
+			const decisions = request.body.decisions.filter(d => validate(decisionSchema, d));
+			//console.log(`${request.body.decisions.length - decisions.length} decisions rejected`);
+
+			await db(`/rest/v1/pool?approved=is.null&user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, decisions);
+			await db(`/rest/v1/pool?approved=eq.false`, "DELETE");
+			const newModerables = await getModerables(request.body.user);
+			
+			response.status(200).send(newModerables);
 			return;
 		}
 		case ("post"): {
@@ -340,18 +385,4 @@ export default async function handler(request, response) {
 			return;
 		}
 	}
-	
-	/*const queryOptions = Object.assign({
-				query: "sort:score",
-				page: 0
-			}, request.body);
-			
-		
-			if (queryOptions.key && queryOptions.user){
-				const r = await gelbooruPosts(queryOptions.key, queryOptions.user, queryOptions.query, queryOptions.page);
-				response.status(200).send(r);
-			} else {
-				response.status(400).send("key and user properties should be set");
-			}
-			break;*/
 }

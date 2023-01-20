@@ -85,6 +85,7 @@ export const grabbersMeta = {
 				].filter(l => l && l != ""),
 				id: raw.id,
 				link: `https://gelbooru.com/index.php?page=post&s=view&id=${raw.id}`,
+				preview: raw.preview_url || null,
 				source: raw.source?.startsWith("http") ? raw.source : null,
 				tags: raw.tags.split(" "),
 				rating: raw.score,

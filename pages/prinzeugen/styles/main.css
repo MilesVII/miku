@@ -26,6 +26,7 @@ body {
 img {
 	max-width: 90%;
 	display: block;
+	border-radius: var(--small-round);
 }
 
 #curtain {
@@ -116,9 +117,9 @@ img {
 .row {
 	display: flex;
 	margin: 0 2% 1vw 2%;
-	flex-flow: row nowrap;
+	flex-flow: row wrap;
 	align-items: baseline;
-	width: 90%
+	width: 100%
 }
 
 .flexCenter {
@@ -147,7 +148,7 @@ img {
 }
 
 .approved {
-	background-color: hsla(1000, 72%, 23%, .42);
+	background-color: hsla(100, 72%, 23%, .42);
 }
 
 .rejected {
