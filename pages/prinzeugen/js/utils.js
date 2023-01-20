@@ -33,5 +33,8 @@ function load(key){
 }
 
 function save(key, data){
-	localStorage.setItem(key, JSON.stringify(data));
+	if (data)
+		localStorage.setItem(key, JSON.stringify(data));
+	else
+		localStorage.removeItem(key);
 }

@@ -140,7 +140,7 @@ async function login(){
 	const response = await callAPI("login", {
 		user: parsedId,
 		userToken: token
-	});
+	}, false);
 
 	if (response.status == 200) {
 		authorize(response.data);
@@ -263,6 +263,12 @@ async function moderate(){
 	
 	loadModerables(newModerables.data);
 	pullCurtain(false);
+}
+
+function signOut(){
+	save("login", null);
+	document.querySelector("#login").classList.remove("hidden");
+	document.querySelector("#authorized").classList.add("hidden");
 }
 
 function report(msg){
