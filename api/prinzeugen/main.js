@@ -116,7 +116,7 @@ async function getGrabbers(user, token){
 		null,
 		null
 	);
-	if (response?.length > 0 && Object.hasOwn(response[0], "grabbers"))
+	if (response[0]?.grabbers)
 		return response[0].grabbers || [];
 	else
 		return null;
