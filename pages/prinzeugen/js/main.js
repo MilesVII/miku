@@ -87,6 +87,8 @@ async function callAPI(action, data, useLogin = true){
 	const raw = await response.text();
 	const payload = safeParse(raw) || raw;
 
+	if (response.status != 200) report(raw);
+
 	return {
 		status: response.status,
 		data: payload
@@ -153,6 +155,22 @@ async function login(){
 	pullCurtain(false);
 }
 
+async function manualGrab(){
+	pullCurtain(true);
+	const response = await callAPI("grab", {}, true);
+	report(`${response.data} new entries`);
+	pullCurtain(false);
+}
+
+async function manualPublish(){
+	const target = document.querySelector("#dsb_target").value.trim();
+	if (target == "") return;
+
+	pullCurtain(true);
+	await callAPI("publish", {target: target}, true);
+	pullCurtain(false);
+}
+
 async function saveGrabbers(){
 	const list = document.querySelector("#grabbersList");
 	const grabs = Array.from(list.children).map(el => GRABBERS[el.dataset.type].read(el));
@@ -160,8 +178,6 @@ async function saveGrabbers(){
 	const response = await callAPI("setGrabbers", {
 		grabbers: grabs
 	});
-	if (response.status != 200)
-		report(`Failed to save: ${JSON.stringify(response.data)}`)
 	pullCurtain(false);
 }
 

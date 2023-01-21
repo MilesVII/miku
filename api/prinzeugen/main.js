@@ -75,7 +75,6 @@ async function grab(user, token){
 	}
 
 	let grabbers = await getGrabbers(user, token);
-	console.log(grabbers[0].state.lastSeen);
 
 	let moderated = [];
 	let approved = [];
@@ -102,8 +101,12 @@ async function grab(user, token){
 		approved: true
 	}));
 
-	await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries0.concat(entries1));
+	const newEntries = entries0.concat(entries1);
+
+	await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, newEntries);
 	await setGrabbers(user, token, grabbers);
+
+	return newEntries.length;
 }
 
 async function getGrabbers(user, token){
@@ -269,8 +272,8 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			await grab(request.body.user, request.body.userToken);
-			response.status(200).send();
+			const count = await grab(request.body.user, request.body.userToken);
+			response.status(200).send(count);
 			return;
 		}
 		case ("setGrabbers"): {

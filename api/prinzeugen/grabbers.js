@@ -35,7 +35,6 @@ async function glbFilterArtists(allTags, u, t){
 	additionals.forEach(pack => tagsResponse.tag = tagsResponse.tag.concat(pack.tag));
 	const artists = tagsResponse.tag.filter(t => t.type == 1).map(t => t.name);
 
-	console.log(artists);
 	return artists;
 }
 
@@ -97,8 +96,6 @@ export const grabbersMeta = {
 			const allArtists = await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
 			if (allArtists)
 				posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
-
-			console.log(posts.map(p => p.artists));
 
 			if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
 

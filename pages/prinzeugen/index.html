@@ -107,12 +107,27 @@
 		</div>
 		<div id="authorized" class="hidden">
 			<div class="tabbar">
+				<span data-target="dsb" class="tab button">Dashboard</span>
 				<span data-target="gbs" class="tab button">Grabbers</span>
 				<span data-target="mnl" class="tab button">Manual</span>
 				<span data-target="mdr" class="tab button">Moderation</span>
 				<span data-target="stg" class="tab button">Settings</span>
 			</div>
 			<div id="main">
+				<div id="dsb" class="tabtarget page hidden">
+					<div class="row flexCenter">
+						<div class="button wideButton" onclick="manualGrab()">Manual grab</div>
+					</div>
+					<div class="row flexCenter">
+						<span class="col halfWide">
+							<input type="text" id="dsb_target" class="wide" placeholder="Telegram chat id"></input>
+						</span>
+						<span class="col halfWide">
+							<div class="button wideButton" onclick="manualPublish()">Manual publish</div>
+						</span>
+					</div>
+				</div>
+
 				<div id="gbs" class="tabtarget page hidden">
 					<div class="row flexCenter">
 						<div class="button" onclick="addGrabber('gelbooru')">Gelbooru</div>
@@ -124,7 +139,6 @@
 				</div>
 
 				<div id="mnl" class="tabtarget page hidden">
-					
 					<div class="tabbar">
 						<span data-target="mnl_glb" class="tab button">Gelbooru</span>
 						<span data-target="mnl_any" class="tab button">Any</span>
