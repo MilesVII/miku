@@ -264,6 +264,13 @@ function renderModerable(message, id){
 	return proto;
 }
 
+async function reloadModerables(){
+	pullCurtain(true);
+	const messages = await callAPI("getModerables", null, true);
+	messages.data.forEach(m => renderModerable(m.message));
+	pullCurtain(false);
+}
+
 async function moderate(){
 	const decisions = Array.from(document.querySelectorAll(".previewSection"))
 		.filter(e => e.classList.contains("approved") || e.classList.contains("rejected"))

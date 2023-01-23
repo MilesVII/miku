@@ -20,7 +20,7 @@ const schema = {
 		user: SCH.number,
 		userToken: SCH.string
 	},
-	getModerable: {
+	getModerables: {
 		user: SCH.number,
 		userToken: SCH.string
 	},
