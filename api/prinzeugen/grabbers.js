@@ -33,7 +33,10 @@ async function glbFilterArtists(allTags, u, t){
 	}));
 
 	additionals.forEach(pack => tagsResponse.tag = tagsResponse.tag.concat(pack.tag));
-	const artists = tagsResponse.tag.filter(t => t.type == 1).map(t => t.name);
+	const cantBe = tagsResponse.tag.filter(t => !t);
+	if (cantBe.length > 0)
+		console.error(cantBe)
+	const artists = tagsResponse.tag.filter(t => t?.type == 1).map(t => t.name);
 
 	return artists;
 }
