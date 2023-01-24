@@ -29,13 +29,12 @@ async function glbFilterArtists(allTags, u, t){
 		paramsPrototype.pid = page;
 		const params = buildURLParams(paramsPrototype);
 		const url = `https://gelbooru.com/index.php?${params}`;
-		return safeParse(await phetch(url)) || {};
+		return safeParse(await phetch(url));
 	}));
 
+	if (additionals.some(pack => !pack)) return null;
+
 	additionals.forEach(pack => tagsResponse.tag = tagsResponse.tag.concat(pack.tag));
-	const cantBe = tagsResponse.tag.filter(t => !t);
-	if (cantBe.length > 0)
-		console.error(cantBe)
 	const artists = tagsResponse.tag.filter(t => t?.type == 1).map(t => t.name);
 
 	return artists;
@@ -96,9 +95,13 @@ export const grabbersMeta = {
 			}));
 
 			const allTags = unique(posts.map(p => p.tags).reduce((p, c) => p.concat(c), []));
-			const allArtists = await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
-			if (allArtists)
-				posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
+			if (posts.length > 0){
+				const allArtists = await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
+				if (allArtists)
+					posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
+				else
+					return [];
+			}
 
 			if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
 

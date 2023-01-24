@@ -217,6 +217,13 @@ function addGrabber(type){
 	list.appendChild(proto);
 }
 
+async function reloadModerables(){
+	pullCurtain(true);
+	const messages = await callAPI("getModerables", null, true);
+	loadModerables(messages.data);
+	pullCurtain(false);
+}
+
 function loadModerables(messages){
 	const mod_list = document.querySelector("#mdr_list");
 	mod_list.innerHTML = "";
@@ -262,13 +269,6 @@ function renderModerable(message, id){
 	});
 
 	return proto;
-}
-
-async function reloadModerables(){
-	pullCurtain(true);
-	const messages = await callAPI("getModerables", null, true);
-	messages.data.forEach(m => renderModerable(m.message));
-	pullCurtain(false);
 }
 
 async function moderate(){
