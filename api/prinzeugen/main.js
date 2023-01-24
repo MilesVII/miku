@@ -1,6 +1,8 @@
 import { chunk, safe, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
 import { grabbers, grabbersMeta } from "./grabbers.js";
 
+const GRAB_INTERVAL_MS = 60 * 60 * 1000; // 1hr
+
 const schema = {
 	debug:{},
 	login: {
@@ -74,17 +76,25 @@ async function grab(user, token){
 		return arr.reduce((p, c) => p.concat(c), []);
 	}
 
+	const now = Date.now();
+
 	let grabbers = await getGrabbers(user, token);
+	if (grabbers.length == 0) return 0;
+	if (grabbers.length == null) return null;
 
 	let moderated = [];
 	let approved = [];
 	for (const grabber of grabbers){
-		const prom = grabbersMeta[grabber.type].action(grabber);
+		grabber.state.lastGrab = grabber.state.lastGrab || now;
+		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
+			grabber.state.lastGrab = now;
+			const prom = grabbersMeta[grabber.type].action(grabber);
 
-		if (grabber.config.moderated) 
-			moderated.push(prom);
-		else
-			approved.push(prom);
+			if (grabber.config.moderated) 
+				moderated.push(prom);
+			else
+				approved.push(prom);
+		}
 	}
 	
 	const entries0 = flatten(await Promise.all(moderated)).map(message => ({
@@ -104,7 +114,8 @@ async function grab(user, token){
 	const newEntries = entries0.concat(entries1);
 
 	await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, newEntries);
-	await setGrabbers(user, token, grabbers);
+	if (grabbers.length > 0)
+		await setGrabbers(user, token, grabbers);
 
 	return newEntries.length;
 }
@@ -273,6 +284,10 @@ export default async function handler(request, response) {
 		}
 		case ("grab"): {
 			const count = await grab(request.body.user, request.body.userToken);
+			if (count == null){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
 			response.status(200).send(count);
 			return;
 		}
