@@ -70,6 +70,40 @@
 				</div>
 			</div>
 		</template>
+		<template id="grabber_twitter">
+			<div class="section">
+				<div class="row flexCenter">
+					<span class="col halfWide">
+						API Bearer token
+					</span>
+					<span class="col halfWide">
+						<input type="text" id="tw_token" class="wide"></input>
+					</span>
+				</div>
+				<div class="row flexCenter">
+					<span class="col halfWide">
+						Username
+					</span>
+					<span class="col halfWide">
+						<input type="text" id="tw_username" class="wide"></input>
+					</span>
+				</div>
+				<div class="row flexCenter">
+					<span class="col halfWide">Moderated</span>
+					<span class="col halfWide">
+						<input type="checkbox" id="tw_moderated" class="wide" checked></input>
+					</span>
+				</div>
+				<div class="row flexCenter">
+					<span class="col halfWide">
+						Last checked post ID
+					</span>
+					<span class="col halfWide">
+						<input type="number" id="tw_last" class="wide" value="0"></input>
+					</span>
+				</div>
+			</div>
+		</template>
 		<template id="moderation_item">
 			<div class="section row previewSection">
 				<a class="previewImage" target="_blank"><img loading="lazy" /></a>
@@ -131,6 +165,7 @@
 				<div id="gbs" class="tabtarget page hidden">
 					<div class="row flexCenter">
 						<div class="button" onclick="addGrabber('gelbooru')">Gelbooru</div>
+						<div class="button" onclick="addGrabber('twitter')">Twitter</div>
 					</div>
 					<div id="grabbersList"></div>
 					<div class="row flexCenter">
@@ -220,7 +255,6 @@
 		
 		<script src="js/io.js"></script>
 		<script src="js/utils.js"></script>
-		<script src="js/elbuilder.js"></script>
 		<script src="js/grabbers.js"></script>
 		<script src="js/main.js"></script>
 	</body>

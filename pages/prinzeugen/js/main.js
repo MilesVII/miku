@@ -242,7 +242,7 @@ function renderModerable(message, id){
 	proto.dataset.id = id;
 
 	proto.querySelector("a").href = message.image[0];
-	proto.querySelector("img").src = message.raw?.preview || message.image[1] || message.image[0];
+	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
 
 	const tagList = proto.querySelector(".row");
 	function renderTag(text, color){

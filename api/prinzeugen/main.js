@@ -85,7 +85,7 @@ async function grab(user, token){
 	let moderated = [];
 	let approved = [];
 	for (const grabber of grabbers){
-		grabber.state.lastGrab = grabber.state.lastGrab || now;
+		grabber.state.lastGrab = grabber.state.lastGrab || 0;
 		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
 			grabber.state.lastGrab = now;
 			const prom = grabbersMeta[grabber.type].action(grabber);
@@ -134,6 +134,8 @@ async function getGrabbers(user, token){
 }
 
 async function setGrabbers(user, token, grabbers){
+	for (let grabber of grabbers)
+		if (!grabber.state.lastGrab) grabber.state.lastGrab = 0;
 	const response = await db(
 		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
 		"PATCH",
@@ -396,7 +398,7 @@ export default async function handler(request, response) {
 			}
 
 			response.status(200).send();
-			break;
+			return;
 		}
 		default: {
 			response.status(400).send("Malformed request");

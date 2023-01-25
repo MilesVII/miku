@@ -36,5 +36,30 @@ const GRABBERS = {
 			el.querySelector("#gb_last").value = data.state.lastSeen;
 			return el;
 		}
+	},
+	"twitter": {
+		template_id: "grabber_twitter",
+		read: el => ({
+			type: "twitter",
+			credentials: {
+				token: el.querySelector("#tw_token").value.trim()
+			},
+			config: {
+				username: el.querySelector("#tw_username").value.trim(),
+				moderated: el.querySelector("#tw_moderated").checked
+			},
+			state: {
+				lastSeen: "" + (safe(() => parseInt(el.querySelector("#tw_last").value, 10)) || 0)
+			}
+		}),
+		fill: (data, el) => {
+			el.querySelector("#tw_token").value = data.credentials.token;
+
+			el.querySelector("#tw_username").value = data.config.username;
+			el.querySelector("#tw_moderated").checked = data.config.moderated;
+
+			el.querySelector("#tw_last").value = data.state.lastSeen;
+			return el;
+		}
 	}
 }
