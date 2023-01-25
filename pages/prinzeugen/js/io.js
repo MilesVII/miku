@@ -1,8 +1,8 @@
-function listenToKeyboard(mappings){
+function listenToKeyboard(preventDefault, mappings){
 	document.addEventListener("keydown", e => {
 		let mapping = mappings.find(m => m.keys.includes(e.code));
 		if (mapping) {
-			//e.preventDefault();
+			if (preventDefault) e.preventDefault();
 			mapping.action();
 		}
 	});

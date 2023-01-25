@@ -32,28 +32,20 @@ async function main(){
 		pullCurtain(false);
 	}
 
-	// listenToKeyboard([
-	// 	{
-	// 		keys: ["KeyQ"],
-	// 		action: () => movePost(SWIPE.REJECT)
-	// 	},
-	// 	{
-	// 		keys: ["KeyW"],
-	// 		action: () => movePost(SWIPE.SKIP)
-	// 	},
-	// 	{
-	// 		keys: ["KeyE"],
-	// 		action: () => movePost(SWIPE.APPROVE)
-	// 	},
-	// 	{
-	// 		keys: ["KeyS"],
-	// 		action: () => renderNextBatch()
-	// 	},
-	// 	{
-	// 		keys: ["KeyR"],
-	// 		action: () => resetSelector()
-	// 	}
-	// ])
+	listenToKeyboard(false, [
+		{
+			keys: ["Comma"],
+			action: () => decide(true)
+		},
+		{
+			keys: ["Period"],
+			action: () => decide(false)
+		},
+		{
+			keys: ["Slash"],
+			action: () => previewFocused()
+		}
+	]);
 }
 
 async function callAPI(action, data, useLogin = true){
@@ -268,7 +260,27 @@ function renderModerable(message, id){
 		proto.classList.remove("approved");
 	});
 
+	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
+
 	return proto;
+}
+
+function decide(approve){
+	const focused = document.activeElement;
+	if (!focused.classList.contains("previewSection")) return;
+	focused.querySelectorAll(".button")[approve ? 0 : 1].click();
+
+	const nextSib = focused.nextElementSibling;
+	if (nextSib?.classList.contains("previewSection")) 
+		nextSib.focus();
+	else
+		document.querySelector("#moderateButton").scrollIntoView({behavior: "smooth"});
+}
+
+function previewFocused(){
+	const focused = document.activeElement;
+	if (!focused.classList.contains("previewSection")) return;
+	focused.querySelector("a").click();
 }
 
 async function moderate(){

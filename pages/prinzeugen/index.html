@@ -105,8 +105,8 @@
 			</div>
 		</template>
 		<template id="moderation_item">
-			<div class="section row previewSection">
-				<a class="previewImage" target="_blank"><img loading="lazy" /></a>
+			<div class="section row previewSection" tabindex="0">
+				<a class="previewImage" target="_blank" tabindex="-1"><img loading="lazy" /></a>
 				<div class="col">
 					<div class="row"></div>
 					<div class="row">
@@ -221,7 +221,7 @@
 							<div class="button wideButton" onclick="reloadModerables()">Reload</div>
 						</span>
 						<span class="col halfWide">
-							<div class="button wideButton" onclick="moderate()">Moderate</div>
+							<div id="moderateButton" class="button wideButton" onclick="moderate()">Moderate</div>
 						</span>
 					</div>
 					<div id="mdr_list"></div>
