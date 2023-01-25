@@ -3,6 +3,10 @@ let pageLock = false;
 main();
 
 async function main(){
+	window.addEventListener("error", (event, source, lineno, colno, error) => {
+		alert(`${event.message}\n\n${source} ${lineno}:${colno}`);
+	});
+
 	const allTabs = document.querySelectorAll(".tab");
 	allTabs.forEach(tab => {
 		const sibs = Array.from(tab.parentElement.children).filter(t => t.classList.contains("tab"));

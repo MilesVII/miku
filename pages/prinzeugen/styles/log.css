@@ -10,6 +10,7 @@
 	color: --shy;
 	width: max-content;
 	cursor: default;
+	white-space: pre-line;
 
 	transition-property: opacity;
 	transition-duration: .7s;
