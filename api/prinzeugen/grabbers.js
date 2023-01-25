@@ -103,21 +103,24 @@ async function twtGetTweets(token, userId, offset, pagination){
 	}
 
 	const lastId = response?.meta?.newest_id;
-	const artistName = `@${usernameByMedia(raw.media_key)}`;
 
-	return imagesRaw.map(raw => ({
-		version: 1,
-		raw: {
-			lastId: lastId,
-			artists: [artistName]
-		},
-		preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
-		image: [raw.url, raw.preview_image_url].filter(l => l),
-		links: [
-			{text: "Twitter", url: tweetLinkByMedia(raw.media_key)},
-			{text: `🎨 ${artistName}`, url: userLinkByMedia(raw.media_key)}
-		].filter(l => l.url)
-	})).concat(additionalBatch);
+	return imagesRaw.map(raw => {
+		const artistName = `@${usernameByMedia(raw.media_key)}`;
+		
+		return {
+			version: 1,
+			raw: {
+				lastId: lastId,
+				artists: [artistName]
+			},
+			preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
+			image: [raw.url, raw.preview_image_url].filter(l => l),
+			links: [
+				{text: "Twitter", url: tweetLinkByMedia(raw.media_key)},
+				{text: `🎨 ${artistName}`, url: userLinkByMedia(raw.media_key)}
+			].filter(l => l.url)
+		}
+	}).concat(additionalBatch);
 }
 
 export const grabbersMeta = {
