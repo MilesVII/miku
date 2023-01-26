@@ -88,6 +88,32 @@ export function phetch(url, options = {}, payload){
 	});
 }
 
+export function phetchV2(url, options = {}, payload){
+	return new Promise(resolve => {
+		options.method = options.method || "GET";
+
+		const req = https.request(url, options, res => {
+			let responseData = [];
+			res.on('data', chunk => {
+				responseData.push(chunk);
+			});
+			res.on('end', () => {
+				let responseBody = Buffer.concat(responseData).toString();
+	
+				resolve({
+					status: res.statusCode,
+					headers: res.headers,
+					body: safeParse(responseBody) || responseBody
+				});
+			});
+		});
+
+		if (payload) req.write(payload);
+
+		req.end()
+	});
+}
+
 export function dl(url){
 	return new Promise(resolve => {
 		const req = https.request(url, {method: "GET"}, res => {

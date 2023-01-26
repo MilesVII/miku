@@ -114,7 +114,11 @@ async function twtGetTweets(token, userId, offset, pagination){
 				artists: [artistName]
 			},
 			preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
-			image: [raw.url, raw.preview_image_url].filter(l => l),
+			image: [
+				raw.url,
+				`${raw.url}?format=jpg&name=medium`,
+				`${raw.url}?format=jpg&name=small`
+			].filter(l => l),
 			links: [
 				{text: "Twitter", url: tweetLinkByMedia(raw.media_key)},
 				{text: `🎨 ${artistName}`, url: userLinkByMedia(raw.media_key)}

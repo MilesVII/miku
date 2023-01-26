@@ -4,7 +4,7 @@ main();
 
 async function main(){
 	window.addEventListener("error", (event, source, lineno, colno, error) => {
-		alert(`${event.message}\n\n${source} ${lineno}:${colno}`);
+		report(`${event.message}\n\n${source} ${lineno}:${colno}`);
 	});
 
 	const allTabs = document.querySelectorAll(".tab");
@@ -120,10 +120,13 @@ async function authorize(userData){
 	document.querySelector("#login").classList.add("hidden");
 	document.querySelector("#authorized").classList.remove("hidden");
 
+	document.querySelector("#stg_access").value = "";
 	document.querySelector("#stg_tg").value = userData.tg_token;
 
 	loadGrabbers(userData.grabbers);
 	loadModerables(userData.moderables);
+
+	report(`You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
 }
 
 async function login(){
@@ -301,6 +304,19 @@ async function moderate(){
 	const newModerables = await callAPI("moderate", {decisions: decisions}, true);
 	
 	loadModerables(newModerables.data);
+	pullCurtain(false);
+}
+
+async function saveSettings(){
+	const newPassword = document.querySelector("#stg_access").value.trim() || null;
+	const tgToken = document.querySelector("#stg_tg").value || null;
+
+	pullCurtain(true);
+	await callAPI("saveSettings", {
+		newUserToken: newPassword,
+		newTgToken: tgToken
+	}, true);
+	if (newPassword) signOut();
 	pullCurtain(false);
 }
 

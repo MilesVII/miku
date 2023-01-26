@@ -1,5 +1,5 @@
-import { chunk, safe, tg, tgReport, phetch, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
-import { grabbers, grabbersMeta } from "./grabbers.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
+import { grabbersMeta } from "./grabbers.js";
 
 const GRAB_INTERVAL_MS = 60 * 60 * 1000; // 1hr
 
@@ -8,6 +8,12 @@ const schema = {
 	login: {
 		user: SCH.number,
 		userToken: SCH.string
+	},
+	saveSettings: {
+		user: SCH.number,
+		userToken: SCH.string,
+		newUserToken: SCH.any,
+		newTgToken: SCH.any
 	},
 	setGrabbers: {
 		user: SCH.number,
@@ -69,6 +75,17 @@ async function db(url, method, headers, body){
 			}, headers || {})
 		}, body ? JSON.stringify(body) : null)
 	);
+}
+
+function db2(url, method, headers, body){
+	return phetchV2(`${process.env.PE_DB_URL}${url}`, {
+		method: method || "GET",
+		headers: Object.assign({
+			"apikey": process.env.PE_SUPABASE_KEY,
+			"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
+			"Content-Type": "application/json"
+		}, headers || {})
+	}, body ? JSON.stringify(body) : null);
 }
 
 async function grab(user, token){
@@ -164,6 +181,11 @@ function getModerables(user){
 		{"Range": "0-100"},
 		null
 	);
+}
+
+async function getScheduledPostCount(user){
+	const response = await db2(`/rest/v1/pool?user=eq.${user}`, "HEAD", {"Prefer": "count=exact"});
+	return response.headers["content-range"]?.split("/")[1];
 }
 
 async function userAccessAllowed(id, token){
@@ -269,11 +291,30 @@ export default async function handler(request, response) {
 			const userData = await db(`/rest/v1/users?id=eq.${request.body.user}`);
 			if (userData?.length > 0 && userData[0]["access_token"] == request.body.userToken){
 				userData[0]["access_token"] = null;
-				userData[0].moderables = await getModerables(request.body.user, request.body.userToken);
+
+				const lickTheTongue = await Promise.all([
+					getModerables(request.body.user, request.body.userToken),
+					getScheduledPostCount(request.body.user)
+				]);
+				userData[0].moderables = lickTheTongue[0];
+				userData[0].postsScheduled = lickTheTongue[1];
 				response.status(200).send(userData[0]);
 			} else {
 				response.status(401).send(null);
 			}
+			return;
+		}
+		case ("saveSettings"): {
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+			const delta = {};
+			if (request.body.newUserToken) delta.access_token = hashPassword(request.body.newUserToken);
+			if (request.body.newTgToken) delta.tg_token = request.body.newTgToken;
+			
+			await db(`/rest/v1/users?id=eq.${request.body.user}`, "PATCH", {"Prefer": "return=minimal"}, delta);
+			response.status(200).send();
 			return;
 		}
 		case ("getGrabbers"): {
@@ -320,7 +361,6 @@ export default async function handler(request, response) {
 				approved: SCH.bool
 			};
 			const decisions = request.body.decisions.filter(d => validate(decisionSchema, d));
-			//console.log(`${request.body.decisions.length - decisions.length} decisions rejected`);
 
 			await db(`/rest/v1/pool?approved=is.null&user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, decisions);
 			await db(`/rest/v1/pool?approved=eq.false`, "DELETE");
