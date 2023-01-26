@@ -40,8 +40,7 @@ const schema = {
 	post: {
 		user: SCH.number,
 		userToken: SCH.string,
-		messages: SCH.array,
-		target: SCH.string
+		messages: SCH.array
 	},
 	publish: {
 		user: SCH.number,
@@ -375,7 +374,20 @@ export default async function handler(request, response) {
 				return;
 			}
 
-			//const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, payload);
+			const messages = request.body.messages;
+			if (!messages.every(m => validate(messageSchema[m.version], m))){
+				response.status(400).send("Invalid messages schema");
+				return;
+			}
+
+			const entries = messages.map(m => ({
+				user: request.body.user,
+				message: m,
+				failed: false,
+				approved: true
+			}));
+
+			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries);
 
 			response.status(200).send(r);
 			break;
