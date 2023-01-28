@@ -48,7 +48,7 @@ export function chunk(a, chunksize){
 
 export function getFileLength(url){
 	return new Promise(resolve => {
-		const headers = {"Referer": "https://www.pixiv.net/"};
+		const headers = url.includes("pximg.net") ? {"Referer": "https://www.pixiv.net/"} : {};
 		const req = https.request(url, {method: "HEAD", headers: headers}, res => {
 			try {
 				resolve({

@@ -254,7 +254,7 @@ async function sendMessage(message, token, target){
 				if (safeParse(report.tg)?.ok) return null;
 
 				if (report.tg.includes("ailed to get HTTP URL content")){
-					report.retry = await tgUploadPhoto(image, target, {inline_keyboard: chunk(links, 2)}, token);
+					report.retry = await tgUploadPhoto(image, target, {inline_keyboard: chunk(message.links, 2)}, token);
 					if (safeParse(report.retry)?.ok) 
 						return null;
 					else
