@@ -158,6 +158,12 @@ async function manualGrab(){
 	pullCurtain(true);
 	const response = await callAPI("grab", {}, true);
 	report(`${response.data} new entries`);
+
+	const grabbers = await callAPI("getGrabbers", {}, true);
+	if (grabbers.status == 200) loadGrabbers(grabbers.data);
+
+	await reloadModerables(false);
+
 	pullCurtain(false);
 }
 
@@ -216,11 +222,11 @@ function addGrabber(type){
 	list.appendChild(proto);
 }
 
-async function reloadModerables(){
-	pullCurtain(true);
+async function reloadModerables(pullCurtains = true){
+	if (pullCurtains) pullCurtain(true);
 	const messages = await callAPI("getModerables", null, true);
 	loadModerables(messages.data);
-	pullCurtain(false);
+	if (pullCurtains) pullCurtain(false);
 }
 
 function loadModerables(messages){
@@ -268,6 +274,7 @@ function renderModerable(message, id){
 	});
 
 	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
+	proto.addEventListener("mousedown", e => e.preventDefault());
 
 	return proto;
 }
@@ -281,7 +288,7 @@ function decide(approve){
 	if (nextSib?.classList.contains("previewSection")) 
 		nextSib.focus();
 	else
-		document.querySelector("#moderateButton").scrollIntoView({behavior: "smooth"});
+		document.querySelector("#moderateButton").scrollIntoView({behavior: "smooth", block: "center"});
 }
 
 function previewFocused(){
@@ -304,6 +311,51 @@ async function moderate(){
 	const newModerables = await callAPI("moderate", {decisions: decisions}, true);
 	
 	loadModerables(newModerables.data);
+	pullCurtain(false);
+}
+
+async function postManual(){
+	const raw = document.querySelector("#manual_post").value;
+	const blocks = 
+		raw
+			.trim()
+			.split("\n\n")
+			.map(
+				b => b.split("\n").map(line => line.trim())
+			);
+
+	function lineToLink(line){
+		const parts = line.split("\t");
+		return {
+			text: parts[0],
+			url: parts[1]
+		}
+	}
+	const posts = blocks.map((block, i) => {
+		const links = block.filter(line => line.includes("\t")).map(line => lineToLink(line));
+		const image = block.filter(line => !line.includes("\t")).filter(line => line.trim());
+
+		let target = image.find(line => line.startsWith("glb://")) || image.find(line => line.startsWith("twt://"));
+		if (target) return {
+			grab: target,
+			links: links
+		};
+
+		target = image.filter(line => line.startsWith("http"));
+		if (target.length > 0) return {
+			images: target,
+			links: links
+		};
+
+		report(`No valid image sources found for block ${i}`);
+		return null;
+	}).filter(b => b);
+
+	if (posts.length == 0) return;
+
+	pullCurtain(true);
+	const response = await callAPI("manual", {posts: posts}, true);
+	if (response.status == 200) document.querySelector("#manual_post").value = "";
 	pullCurtain(false);
 }
 

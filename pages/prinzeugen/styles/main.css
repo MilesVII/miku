@@ -133,6 +133,10 @@ img {
 	text-align: right;
 }
 
+.rightPreviewArea {
+	width: 60%;
+}
+
 .halfWide {
 	width: 45%;
 }

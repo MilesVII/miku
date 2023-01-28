@@ -1,4 +1,4 @@
-import { last, phetch, escapeMarkdown, safeParse, SCH, unique, range } from "../utils.js";
+import { last, phetch, escapeMarkdown, safeParse, SCH, unique, range, sleep } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
@@ -25,10 +25,12 @@ async function glbFilterArtists(allTags, u, t){
 
 	const pageCount = Math.ceil(tagsResponse["@attributes"].count / tagsResponse["@attributes"].limit)
 	const pageRange = range(1, pageCount);
+	const throttle = pageRange.length > 7;
 	const additionals = await Promise.all(pageRange.map(async page => {
 		paramsPrototype.pid = page;
 		const params = buildURLParams(paramsPrototype);
 		const url = `https://gelbooru.com/index.php?${params}`;
+		if (throttle) await sleep(Math.random() * 5000);
 		return safeParse(await phetch(url));
 	}));
 
@@ -127,6 +129,42 @@ async function twtGetTweets(token, userId, offset, pagination){
 	}).concat(additionalBatch);
 }
 
+async function twtGetMessage(token, tweetId){
+	//not implemented
+	const url = `https://api.twitter.com/2/tweets/${tweetId}${[
+		"expansions=author_id,attachments.media_keys",
+		"media.fields=preview_image_url,type,url",
+		"user.fields=username"
+	].join("&")}`;
+	const response = safeParse(await phetch(url, {
+		method: "GET",
+		headers: {
+			"Authorization": `Bearer ${token}`
+		}
+	}));
+	console.log(response)
+}
+
+export const manualGrabbers = {
+	"twitter": async (postId, token) => {
+		return null;
+	},
+	"gelbooru": async (postId, user, key) => {
+		return null;
+		const params = buildURLParams({
+			page: "dapi",
+			s: "post",
+			q: "index",
+			tags: `id:${postId}`,
+			pid: 0,
+			json: 1,
+			api_key: key,
+			user_id: user
+		});
+		const url = `https://gelbooru.com/index.php?${params}`;
+	}
+}
+
 export const grabbersMeta = {
 	"twitter": {
 		schema: {
@@ -142,7 +180,6 @@ export const grabbersMeta = {
 			}
 		},
 		action: async grabber => {
-			console.log(grabber);
 			if (!grabber.config.userId){
 				grabber.config.userId = await twtGetUserIdByName(grabber.credentials.token, grabber.config.username);
 			}

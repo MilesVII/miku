@@ -42,6 +42,11 @@ const schema = {
 		userToken: SCH.string,
 		messages: SCH.array
 	},
+	manual: {
+		user: SCH.number,
+		userToken: SCH.string,
+		posts: SCH.array
+	},
 	publish: {
 		user: SCH.number,
 		userToken: SCH.string,
@@ -389,6 +394,22 @@ export default async function handler(request, response) {
 
 			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries);
 
+			response.status(200).send(r);
+			break;
+		}
+		case ("manual"): {
+			const messages = request.body.posts.map(post => post.grab ? null : {
+				version: 1,
+				image: post.images,
+				links: post.links
+			});
+			const entries = messages.map(m => ({
+				user: request.body.user,
+				message: m,
+				failed: false,
+				approved: true
+			}));
+			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries);
 			response.status(200).send(r);
 			break;
 		}

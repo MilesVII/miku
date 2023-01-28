@@ -48,7 +48,8 @@ export function chunk(a, chunksize){
 
 export function getFileLength(url){
 	return new Promise(resolve => {
-		const req = https.request(url, {method: "HEAD"}, res => {
+		const headers = {"Referer": "https://www.pixiv.net/"};
+		const req = https.request(url, {method: "HEAD", headers: headers}, res => {
 			try {
 				resolve({
 					length: parseInt(res.headers["content-length"], 10) || "0",
@@ -182,6 +183,10 @@ export function parseTelegramTarget(raw){
 		console.error(e);
 		return null;
 	}
+}
+
+export async function sleep(ms){
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 //https://github.com/edwmurph/escape-markdown/blob/master/index.js

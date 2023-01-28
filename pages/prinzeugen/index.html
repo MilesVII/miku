@@ -107,7 +107,7 @@
 		<template id="moderation_item">
 			<div class="section row previewSection" tabindex="0">
 				<a class="previewImage" target="_blank" tabindex="-1"><img loading="lazy" /></a>
-				<div class="col">
+				<div class="col rightPreviewArea">
 					<div class="row"></div>
 					<div class="row">
 						<span class="button"></span>
@@ -174,45 +174,13 @@
 				</div>
 
 				<div id="mnl" class="tabtarget page hidden">
-					<div class="tabbar">
-						<span data-target="mnl_glb" class="tab button">Gelbooru</span>
-						<span data-target="mnl_any" class="tab button">Any</span>
-					</div>
-					<div>
-						<div id="mnl_glb" class="tabtarget hidden">
-							<div class="section">
-								<div class="row flexCenter">
-									<span class="col halfWide">
-										List of post ids
-									</span>
-									<span class="col halfWide">
-										<textarea id="gb_whites" class="wide" placeholder="sort:id:asc and id:>lastseen are added autmoatically"></textarea>
-									</span>
-								</div>
-								<div id="mnl_linklist"></div>
-								<div class="row flexCenter">
-									<div class="button" onclick="addLinkToManual()">Add link</div>
-								</div>
-							</div>
-						</div>
-						<div id="mnl_any" class="tabtarget hidden">
-							<div class="section">
-								<div class="row flexCenter">
-									<span class="col halfWide">
-										Image source
-									</span>
-									<span class="col halfWide">
-										<input type="text" id="mnl_source" class="wide" placeholder=""></input>
-									</span>
-								</div>
-								<div id="mnl_linklist"></div>
-								<div class="row flexCenter">
-									<div class="button" onclick="addLinkToManual()">Add link</div>
-								</div>
-							</div>
-							<div class="button wideButton" onclick="postManual()">Schedule post</div>
-						</div>
-					</div>
+					<div>Links to image come first, should start with http</div>
+					<!--<div>glb://[post id] for automating Gelbooru grab</div>
+					<div>twt://[post id] for automating Twitter grab</div>-->
+					<div>[caption][tab][link] for additional links</div>
+					<div>Empty line for another post</div>
+					<textarea id="manual_post" class="wide" rows="10"></textarea>
+					<div class="button wideButton" onclick="postManual()">Schedule post</div>
 				</div>
 
 				<div id="mdr" class="tabtarget page hidden">
