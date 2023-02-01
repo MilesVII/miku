@@ -213,7 +213,8 @@ export const grabbersMeta = {
 			const tags = grabber.config.tags.join(" ~ ");
 			const black = grabber.config.blacks.join(" ~ ");
 			const white = mandatoryFilter.concat(grabber.config.whites).join(" ");
-			const query = `{${tags}} -{${black}} ${white}`;
+			const bq = grabber.config.blacks.length > 0 ? `-{${black}} ` : "";
+			const query = `${tags} ${bq}${white}`;
 
 			const params = buildURLParams({
 				page: "dapi",
