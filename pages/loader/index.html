@@ -1,0 +1,78 @@
+<html>
+	<head>
+		<style type="text/css">
+			body {
+				background-color: white;
+				/*display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-direction: column;*/
+
+				margin: 0;
+				height: 100vh;
+			}
+
+			.progressbar {
+				transition-property: opacity;
+				transition-duration: .4s;
+			}
+
+			.absoluteCentered {
+				position: absolute;
+				
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				margin: auto;
+				height: fit-content;
+			}
+
+			.progress-back {
+				z-index: 0;
+				filter: opacity(40%) grayscale(100%);
+			}
+
+			.progress-fore {
+				z-index: 1;
+				clip-path: polygon(0% 0%, 0% 0%, 0% 100%, 0% 100%);
+				transition-property: all;
+				transition-duration: 1s;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div class="progressbar">
+			<img src="/pages/shortdemo/loader-active.svg" class="progress-back absoluteCentered">
+			<img src="/pages/shortdemo/loader-active.svg" class="progress-fore absoluteCentered">
+		</div>
+
+
+		<script type="text/javascript">
+			function updateProgressbar(progress, bar){
+				function progressClipPath(width){
+					let percent = Math.round(width * 100);
+					return `polygon(0% 0%, ${percent}% 0%, ${percent}% 100%, 0% 100%)`
+				}
+				
+				bar.querySelector(".progress-fore").style.clipPath = progressClipPath(progress);
+			}
+
+			let barContainer = document.querySelector(".progressbar");
+
+			let progress = 0;
+			let interval = null;
+			interval = setInterval(()=>{
+				progress += .143;
+				updateProgressbar(progress, barContainer)
+
+				if (progress >= 0.99){
+					barContainer.style.opacity = "0";
+					barContainer.addEventListener("transitionend", () => barContainer.style.display = "none");
+					clearInterval(interval);
+				}
+			}, 1000 * 2);
+		</script>
+	</body>
+</html>
