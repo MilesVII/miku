@@ -167,9 +167,12 @@ img {
 
 .previewImage {
 	width: 30%;
-	max-height: 32vh;
 	border-radius: var(--small-round);
 	margin: var(--small-space);
+}
+
+.previewImage > img {
+	max-height: 32vh;
 }
 
 .hidden {
