@@ -1,7 +1,7 @@
 import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
 
-const GRAB_INTERVAL_MS = 60 * 60 * 1000; // 1hr
+const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 
 const schema = {
 	debug:{},
