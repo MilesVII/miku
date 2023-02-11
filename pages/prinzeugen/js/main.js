@@ -1,5 +1,9 @@
 let pageLock = false;
 
+const AI_SCORES = [3, 1, 0, -1, -3];
+const AI_STYLE_CLASSES = ["aivote_4", "aivote_3", "aivote_2", "aivote_1", "aivote_0", "aivote_skip"]
+let aiMode = false;
+
 main();
 
 async function main(){
@@ -48,6 +52,30 @@ async function main(){
 		{
 			keys: ["Slash"],
 			action: () => previewFocused()
+		},
+		{
+			keys: ["Backquote"],
+			action: () => decide(5)
+		},
+		{
+			keys: ["Digit1"],
+			action: () => decide(4)
+		},
+		{
+			keys: ["Digit2"],
+			action: () => decide(3)
+		},
+		{
+			keys: ["Digit3"],
+			action: () => decide(2)
+		},
+		{
+			keys: ["Digit4"],
+			action: () => decide(1)
+		},
+		{
+			keys: ["Digit5"],
+			action: () => decide(0)
 		}
 	]);
 }
@@ -133,7 +161,7 @@ async function login(){
 	const id = document.querySelector("#login_id").value;
 	const token = document.querySelector("#login_token").value;
 
-	if (id == "" || token == "") return;
+	if (id == "") return;
 
 	if (!pullCurtain(true)) return;
 
@@ -231,9 +259,13 @@ async function reloadModerables(pullCurtains = true){
 
 function loadModerables(messages){
 	const mod_list = document.querySelector("#mdr_list");
+	aiMode = load("login").id == 3;
 	mod_list.innerHTML = "";
 	messages.forEach(m => {
-		mod_list.appendChild(renderModerable(m.message, m.id));
+		if (aiMode)
+			mod_list.appendChild(renderAiModerable(m.message, m.id));
+		else
+			mod_list.appendChild(renderModerable(m.message, m.id));
 	});
 }
 
@@ -279,10 +311,44 @@ function renderModerable(message, id){
 	return proto;
 }
 
+function renderAiModerable(message, id){
+	//Message version 1 expected
+	if (message.version != 1){
+		console.error("Unsupported message version");
+		return;
+	}
+	const proto = fromTemplate("moderation_ai");
+	proto.dataset.id = id;
+
+	proto.querySelector("a").href = message.image[0];
+	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
+
+	const buttons = proto.querySelectorAll(".button");
+	AI_STYLE_CLASSES.forEach((c, i) => {
+		const score = AI_SCORES[i];
+		buttons[i].textContent = score == undefined ? "S" : score;
+		buttons[i].addEventListener("click", () => {
+			AI_STYLE_CLASSES.forEach(cl => proto.classList.remove(cl));
+			proto.classList.add(c);
+
+			buttons.forEach(b => b.classList.remove("aivote_selected"))
+			buttons[i].classList.add("aivote_selected");
+		});
+	});
+
+	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
+	proto.addEventListener("mousedown", e => e.preventDefault());
+
+	return proto;
+}
+
 function decide(approve){
 	const focused = document.activeElement;
 	if (!focused.classList.contains("previewSection")) return;
-	focused.querySelectorAll(".button")[approve ? 0 : 1].click();
+	if (typeof approve == "boolean")
+		focused.querySelectorAll(".button")[approve ? 0 : 1].click();
+	else
+		focused.querySelectorAll(".button")[approve].click();
 
 	const nextSib = focused.nextElementSibling;
 	if (nextSib?.classList.contains("previewSection")) 
@@ -298,12 +364,27 @@ function previewFocused(){
 }
 
 async function moderate(){
-	const decisions = Array.from(document.querySelectorAll(".previewSection"))
-		.filter(e => e.classList.contains("approved") || e.classList.contains("rejected"))
-		.map(e => ({
-			id: parseInt(e.dataset.id, 10),
-			approved: e.classList.contains("approved")
-		}));
+	if (aiMode){
+		function getScoreByCL(list){
+			const selected = list.filter(cn => AI_STYLE_CLASSES.includes(cn))[0];
+			if (!selected) return 0;
+			return AI_SCORES[AI_STYLE_CLASSES.indexOf(selected)];
+		}
+		decisions = Array.from(document.querySelectorAll(".previewSection"))
+			.filter(e => Array.from(e.classList).some(cn => AI_STYLE_CLASSES.includes(cn)))
+			.map(e => ({
+				id: parseInt(e.dataset.id, 10),
+				approved: !e.classList.contains("aivote_skip"),
+				score: getScoreByCL(Array.from(e.classList))
+			}));
+	} else {
+		decisions = Array.from(document.querySelectorAll(".previewSection"))
+			.filter(e => e.classList.contains("approved") || e.classList.contains("rejected"))
+			.map(e => ({
+				id: parseInt(e.dataset.id, 10),
+				approved: e.classList.contains("approved")
+			}));
+	}
 
 	if (decisions.length == 0) return;
 

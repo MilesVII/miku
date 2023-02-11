@@ -182,7 +182,7 @@ function getModerables(user){
 	return db(
 		`/rest/v1/pool?approved=is.null&user=eq.${user}&select=*`,
 		"GET",
-		{"Range": "0-100"},
+		{"Range": "0-199"},
 		null
 	);
 }
@@ -194,7 +194,7 @@ async function getScheduledPostCount(user){
 
 async function userAccessAllowed(id, token){
 	const user = await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null);
-	return user && user[0] && user[0]["access_token"] == token;
+	return user && user[0] && (user[0]["access_token"] == token || user[0]["access_token"] == null);
 }
 
 //return null on success or any object on error
@@ -293,7 +293,7 @@ export default async function handler(request, response) {
 		}
 		case ("login"): {
 			const userData = await db(`/rest/v1/users?id=eq.${request.body.user}`);
-			if (userData?.length > 0 && userData[0]["access_token"] == request.body.userToken){
+			if (userData?.length > 0 && (userData[0]["access_token"] == request.body.userToken || userData[0]["access_token"] == null)){
 				userData[0]["access_token"] = null;
 
 				const lickTheTongue = await Promise.all([
