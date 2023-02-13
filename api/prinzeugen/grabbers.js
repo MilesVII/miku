@@ -206,7 +206,7 @@ export const grabbersMeta = {
 				lastSeen: SCH.number
 			}
 		},
-		action: async grabber => {
+		action: async (grabber, skipArtists = false) => {
 			const lastSeen = grabber.state.lastSeen || 0;
 			const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
 
@@ -214,7 +214,7 @@ export const grabbersMeta = {
 			const black = grabber.config.blacks.join(" ~ ");
 			const white = mandatoryFilter.concat(grabber.config.whites).join(" ");
 			const bq = grabber.config.blacks.length > 0 ? `-{${black}} ` : "";
-			const query = `${tags} ${bq}${white}`;
+			const query = `{${tags}} ${bq}${white}`;
 
 			const params = buildURLParams({
 				page: "dapi",
@@ -246,7 +246,7 @@ export const grabbersMeta = {
 
 			const allTags = unique(posts.map(p => p.tags).reduce((p, c) => p.concat(c), []));
 			if (posts.length > 0){
-				const allArtists = await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
+				const allArtists = skipArtists ? [] : await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
 				if (allArtists)
 					posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
 				else

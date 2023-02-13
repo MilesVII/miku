@@ -46,6 +46,10 @@ export function chunk(a, chunksize){
 	return r;
 }
 
+export function wegood(status){
+	return status >= 200 && status < 300;
+}
+
 export function getFileLength(url){
 	return new Promise(resolve => {
 		const headers = url.includes("pximg.net") ? {"Referer": "https://www.pixiv.net/"} : {};

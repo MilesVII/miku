@@ -1,4 +1,4 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto } from "../utils.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto, wegood } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
@@ -31,6 +31,9 @@ const schema = {
 	getModerables: {
 		user: SCH.number,
 		userToken: SCH.string
+	},
+	getPool: {
+		user: SCH.number
 	},
 	moderate: {
 		user: SCH.number,
@@ -92,6 +95,22 @@ function db2(url, method, headers, body){
 	}, body ? JSON.stringify(body) : null);
 }
 
+function parseContentRange(range){
+	try {
+		const parts = range.split("/");
+		const leftParts = parts[0].split("-");
+		let proto = {
+			from: parseInt(leftParts[0], 10),
+			to: parseInt(leftParts[1], 10) + 1,
+			count: parseInt(parts[1], 10)
+		};
+		proto.renderRange = () => `${proto.from}-${Math.min(proto.to, proto.count) - 1}`;
+		return proto;
+	} catch(e){
+		return null;
+	}
+}
+
 async function grab(user, token){
 	function flatten(arr){
 		return arr.reduce((p, c) => p.concat(c), []);
@@ -109,7 +128,7 @@ async function grab(user, token){
 		grabber.state.lastGrab = grabber.state.lastGrab || 0;
 		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
 			grabber.state.lastGrab = now;
-			const prom = grabbersMeta[grabber.type].action(grabber);
+			const prom = grabbersMeta[grabber.type].action(grabber, user == 3);
 
 			if (grabber.config.moderated) 
 				moderated.push(prom);
@@ -287,8 +306,7 @@ export default async function handler(request, response) {
 
 	switch (request.body.action){
 		case ("debug"): {
-			const r = null;
-			response.status(200).send(r);
+			response.status(200).send();
 			return;
 		}
 		case ("login"): {
@@ -354,6 +372,34 @@ export default async function handler(request, response) {
 			response.status(200).send(messages);
 			return;
 		}
+		case ("getPool"): {
+			const first = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {"Prefer": "count=exact"});
+			if (!wegood(first.status)) {
+				response.status(502).send(first);
+				return;
+			}
+			let rows = first.body;
+			
+			const rng = parseContentRange(first.headers["content-range"]);
+			const stride = rng.to - rng.from;
+
+			while (rng.count > rng.to){
+				rng.from += stride;
+				rng.to += stride;
+				const amndmnt = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {
+					"Prefer": "count=exact",
+					"Range": rng.renderRange()
+				});
+				if (wegood(amndmnt.status)) {
+					rows = rows.concat(amndmnt.body);
+				} else {
+					console.error(amndmnt.body)
+					break;
+				}
+			}
+			response.status(200).send(rows);
+			return;
+		}
 		case ("moderate"): {
 			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
 				response.status(401).send("Wrong user id or access token");
@@ -365,7 +411,7 @@ export default async function handler(request, response) {
 				approved: SCH.bool
 			};
 			const decisions = request.body.decisions.filter(d => validate(decisionSchema, d));
-
+			
 			await db(`/rest/v1/pool?approved=is.null&user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, decisions);
 			await db(`/rest/v1/pool?approved=eq.false`, "DELETE");
 			const newModerables = await getModerables(request.body.user);

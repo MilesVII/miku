@@ -368,7 +368,8 @@ async function moderate(){
 		function getScoreByCL(list){
 			const selected = list.filter(cn => AI_STYLE_CLASSES.includes(cn))[0];
 			if (!selected) return 0;
-			return AI_SCORES[AI_STYLE_CLASSES.indexOf(selected)];
+			const score = AI_SCORES[AI_STYLE_CLASSES.indexOf(selected)];
+			return score == undefined ? -5 : score;
 		}
 		decisions = Array.from(document.querySelectorAll(".previewSection"))
 			.filter(e => Array.from(e.classList).some(cn => AI_STYLE_CLASSES.includes(cn)))
