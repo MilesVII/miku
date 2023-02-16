@@ -291,11 +291,11 @@ async function sendMessage(message, token, target){
 
 export default async function handler(request, response) {
 	if (request.method != "POST" || !request.body){
-		response.status(400).send("Malformed request");
+		response.status(400).send("Malformed request. Content-Type header and POST required.");
 		return;
 	}
 	if (!schema[request.body?.action]){
-		response.status(400).send("Unknown action");
+		response.status(400).send(`Unknown action: ${request.body?.action}\nRqBody: ${JSON.stringify(request.body)}`);
 		return;
 	}
 	if (!validate(schema[request.body.action], request.body)){
