@@ -33,6 +33,7 @@ export default async function handler(request, response) {
 		})
 		.toBuffer();
 	
+	response.setHeader("Content-Type", "image/avif")
 	response.status(200).end(data);
 	return;
 }
