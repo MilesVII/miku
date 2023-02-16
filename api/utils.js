@@ -103,12 +103,14 @@ export function phetchV2(url, options = {}, payload){
 				responseData.push(chunk);
 			});
 			res.on('end', () => {
-				let responseBody = Buffer.concat(responseData).toString();
+				const raw = Buffer.concat(responseData);
+				let responseBody = raw.toString();
 	
 				resolve({
 					status: res.statusCode,
 					headers: res.headers,
-					body: safeParse(responseBody) || responseBody
+					body: safeParse(responseBody) || responseBody,
+					raw: raw
 				});
 			});
 		});

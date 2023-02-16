@@ -76,6 +76,10 @@ async function main(){
 		{
 			keys: ["Digit5"],
 			action: () => decide(0)
+		},
+		{
+			keys: ["Digit0"],
+			action: () => document.querySelectorAll(".previewSection").forEach(e => e.querySelector("img").src = `/api/imgproxy?url=${e.dataset.original}`)
 		}
 	]);
 }
@@ -277,6 +281,7 @@ function renderModerable(message, id){
 	}
 	const proto = fromTemplate("moderation_item");
 	proto.dataset.id = id;
+	proto.dataset.original = message.image[0];
 
 	proto.querySelector("a").href = message.image[0];
 	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
@@ -319,6 +324,7 @@ function renderAiModerable(message, id){
 	}
 	const proto = fromTemplate("moderation_ai");
 	proto.dataset.id = id;
+	proto.dataset.original = message.image[0];
 
 	proto.querySelector("a").href = message.image[0];
 	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
@@ -360,7 +366,8 @@ function decide(approve){
 function previewFocused(){
 	const focused = document.activeElement;
 	if (!focused.classList.contains("previewSection")) return;
-	focused.querySelector("a").click();
+	//focused.querySelector("a").click();
+	focused.querySelector("img").src = `/api/imgproxy?url=${focused.dataset.original}`;
 }
 
 async function moderate(){
