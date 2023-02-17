@@ -19,6 +19,8 @@ export default async function handler(request, response) {
 	const w = request.body?.w || spi(request.query.w) || 1024;
 	const h = request.body?.h || spi(request.query.h) || 1024;
 	const q = request.body?.q || spi(request.query.q) || 70;
+	const j = !!(request.query.jpeg || request.query.j);
+	const r = w == 0;
 
 	const original = await phetchV2(url)
 	if (original.status > 299) {
@@ -26,14 +28,22 @@ export default async function handler(request, response) {
 		return;
 	}
 
-	const data = await sharp(original.raw)
-		.resize(w, h, {fit: "inside"})
-		.avif({
-			quality: q
-		})
-		.toBuffer();
+	const formatOptions = {
+		quality: q
+	};
+
+	let horns = sharp(original.raw);
+	if (!r) horns = horns.resize(w, h, {fit: "inside"});
+	if (j){
+		horns = horns.jpeg(formatOptions)
+		response.setHeader("Content-Type", "image/jpeg");
+	} else {
+		horns = horns.avif(formatOptions);
+		response.setHeader("Content-Type", "image/avif");
+	}
 	
-	response.setHeader("Content-Type", "image/avif")
+	const data = await horns.toBuffer()
+	
 	response.status(200).end(data);
 	return;
 }
