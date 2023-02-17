@@ -1,5 +1,4 @@
 import * as https from "https";
-import FormData from "form-data";
 import { pbkdf2Sync } from "node:crypto";
 
 export function hashPassword(raw){
@@ -136,32 +135,7 @@ export function dl(url){
 	});
 }
 
-export async function tgUploadPhoto(image, target, markup, token = process.env.TG_TOKEN){
-	const url = `https://api.telegram.org/bot${token}/sendPhoto`;
-
-	const buffer = await dl(image);
-	const extension = last(image.split("."));
-	
-	const fd = new FormData();
-	fd.append("chat_id", target);
-	if (markup)
-		fd.append("reply_markup", JSON.stringify(markup));
-	fd.append("photo", buffer, `file.${extension}`);
-
-	return await new Promise(resolve => {
-		fd.submit(url, (err, res) => {
-			let responseData = [];
-			res.on('data', chunk => {
-				responseData.push(chunk);
-			});
-			res.on('end', () => {
-				resolve(Buffer.concat(responseData));
-			});
-		});
-	});
-}
-
-export function tg(command, payload, token = process.env.TG_TOKEN, useFormData = false){
+export function tg(command, payload, token = process.env.TG_TOKEN){
 	const url = `https://api.telegram.org/bot${token}/${command}`;
 	const options = {
 		method: "POST",

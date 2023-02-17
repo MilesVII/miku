@@ -1,4 +1,4 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, tgUploadPhoto, wegood } from "../utils.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, wegood } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
@@ -258,27 +258,32 @@ async function sendMessage(message, token, target){
 			}
 
 			const report = {};
+			
+			const messageData = {
+				chat_id: target,
+				photo: image,
+				reply_markup: {
+					inline_keyboard: chunk(message.links, 2)
+				}
+			};
 			if (fatto){
-				//Todo: try resizing the fattos on my side
-				return "Fatto! Original image too big, no alternative sources";
+				messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${messageData.photo}`;
+				report.tg = await tg("sendPhoto", messageData, token);
+				
+				if (safeParse(report.tg)?.ok) 
+					return null 
+				else
+					return report;
 			} else {
-				report.tg = await tg("sendPhoto", {
-					chat_id: target,
-					photo: image,
-					reply_markup: {
-						inline_keyboard: chunk(message.links, 2)
-					}
-				}, token);
+				report.tg = await tg("sendPhoto", messageData, token);
 
 				if (safeParse(report.tg)?.ok) return null;
 
-				if (report.tg.includes("ailed to get HTTP URL content")){
-					report.retry = await tgUploadPhoto(image, target, {inline_keyboard: chunk(message.links, 2)}, token);
-					if (safeParse(report.retry)?.ok) 
-						return null;
-					else
-						return report;
-				} else
+				messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
+				report.retry = await tg("sendPhoto", messageData, token);
+				if (safeParse(report.retry)?.ok) 
+					return null;
+				else
 					return report;
 			}
 		} else {
