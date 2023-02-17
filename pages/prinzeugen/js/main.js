@@ -176,11 +176,11 @@ async function login(){
 	}, false);
 
 	if (response.status == 200) {
-		authorize(response.data);
 		save("login", {
 			id: parsedId,
 			token: token
 		});
+		authorize(response.data);
 	}
 
 	pullCurtain(false);
