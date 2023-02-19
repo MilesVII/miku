@@ -7,37 +7,59 @@ function buildURLParams(params){
 }
 
 async function glbFilterArtists(allTags, u, t){
-	const paramsPrototype = {
-		api_key: t,
-		user_id: u,
-		page: "dapi",
-		s: "tag",
-		q: "index",
-		pid: 0,
-		json: 1,
-		names: allTags.join(" ")
-	};
-	let tagsParams = buildURLParams(paramsPrototype);
-	let tagsUrl = `https://gelbooru.com/index.php?${tagsParams}`;
+	async function phetchTagsPage(page){
+		const params = {
+			api_key: t,
+			user_id: u,
+			page: "dapi",
+			s: "tag",
+			q: "index",
+			pid: page,
+			json: 1,
+			names: allTags.join(" ")
+		};
+		const url = `https://gelbooru.com/index.php?${buildURLParams(params)}`;
+		return safeParse(await phetch(url)) || {};
+	}
 
-	let tagsResponse = safeParse(await phetch(tagsUrl)) || {};
-	if (!tagsResponse["@attributes"]) return null;
-
-	const pageCount = Math.ceil(tagsResponse["@attributes"].count / tagsResponse["@attributes"].limit)
+	let firstResponse = await phetchTagsPage(0);
+	if (!firstResponse["@attributes"]) return null;
+	
+	const pageCount = Math.ceil(firstResponse["@attributes"].count / firstResponse["@attributes"].limit)
 	const pageRange = range(1, pageCount);
-	const throttle = pageRange.length > 7;
-	const additionals = await Promise.all(pageRange.map(async page => {
-		paramsPrototype.pid = page;
-		const params = buildURLParams(paramsPrototype);
-		const url = `https://gelbooru.com/index.php?${params}`;
-		if (throttle) await sleep(Math.random() * 5000);
-		return safeParse(await phetch(url));
-	}));
 
-	if (additionals.some(pack => !pack)) return null;
+	function isBlank(r){
+		return !r["@attributes"]
+	}
+	function countBlanks(responses){
+		return responses.filter(entry => isBlank(entry)).length;
+	}
+	function logResponsesStatus(responses){
+		console.log(responses.map(r => isBlank(r) ? "_" : "+").join(""));
+	}
 
-	additionals.forEach(pack => tagsResponse.tag = tagsResponse.tag.concat(pack.tag));
-	const artists = tagsResponse.tag.filter(t => t?.type == 1).map(t => t.name);
+	const additionals = await Promise.all(pageRange.map(page => phetchTagsPage(page)));
+	for (
+		let tries = 0;
+		tries < 3 && countBlanks(additionals) > 0;
+		++tries
+	){
+		await sleep(3000);
+		for (let i in additionals){
+			if (isBlank(additionals[i])){
+				const p = parseInt(i, 10) + 1;
+				additionals[i] = await phetchTagsPage(p);
+			}
+		}
+	}
+
+	if (countBlanks(additionals) > 0) {
+		console.error("failed to fill blanks for tags");
+		return null;
+	}
+
+	additionals.forEach(pack => firstResponse.tag = firstResponse.tag.concat(pack.tag));
+	const artists = firstResponse.tag.filter(t => t?.type == 1).map(t => t.name);
 
 	return artists;
 }

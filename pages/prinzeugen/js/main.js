@@ -50,7 +50,7 @@ async function main(){
 			action: () => decide(false)
 		},
 		{
-			keys: ["Slash"],
+			keys: ["Slash", "ShiftRight", "ControlRight"],
 			action: () => previewFocused()
 		},
 		{
