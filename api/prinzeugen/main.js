@@ -242,17 +242,28 @@ async function sendMessage(message, token, target){
 	}
 	if (message.version == 1){
 		if (message.image.length > 0){
-			const fileLength = await getFileLength(message.image[0]);
-			if (fileLength.status != 200) return "Bad status from HEAD to image source";
-			let firstSkipped = false;
+			const meta = await phetchV2(message.image[0], {method: "HEAD"});
+			if (meta.status != 200) return "No head?";
+			
+			const fileLength = parseInt(meta.headers["content-length"] || "0", 10);
+			const typeRaw = meta.headers["content-type"] || "image/dunno";
+			let type;
+			if (typeRaw.startsWith("image/") && typeRaw != "image/gif")
+				type = "img";
+			else if (typeRaw == "image/gif")
+				type = "gif";
+			else
+				type = "vid";
 
-			let fatto = false;
+			let firstSkipped = false;
 			let image = message.image[0];
-			if (fileLength.length > 5 * 1024 * 1024){
+			let fatto = false;
+			if (type == "img" && fileLength.length > 9 * 1024 * 1024){
 				firstSkipped = true;
 				if (message.image[1]){
 					image = message.image[1];
 				} else {
+					image = `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${image}`;
 					fatto = true;
 				}
 			}
@@ -261,31 +272,41 @@ async function sendMessage(message, token, target){
 			
 			const messageData = {
 				chat_id: target,
-				photo: image,
 				reply_markup: {
 					inline_keyboard: chunk(message.links, 2)
 				}
 			};
-			if (fatto){
-				messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${messageData.photo}`;
-				report.tg = await tg("sendPhoto", messageData, token);
-				
-				if (safeParse(report.tg)?.ok) 
-					return null 
-				else
-					return report;
-			} else {
-				report.tg = await tg("sendPhoto", messageData, token);
-
-				if (safeParse(report.tg)?.ok) return null;
-
-				messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
-				report.retry = await tg("sendPhoto", messageData, token);
-				if (safeParse(report.retry)?.ok) 
-					return null;
-				else
-					return report;
+			let command;
+			switch (type){
+				case ("img"): {
+					messageData.photo = image;
+					command = "sendPhoto";
+					break;
+				}
+				case ("gif"): {
+					messageData.animation = image;
+					command = "sendAnimation";
+					break;
+				}
+				case ("vid"): {
+					messageData.video = image;
+					command = "sendVideo";
+					break;
+				}
+				default: return "Can't detect content type to send to Tg"
 			}
+
+			report.tg = await tg(command, messageData, token);
+			if (safeParse(report.tg)?.ok) return null;
+
+			if (type != "img" || fatto)
+				return report;
+			messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
+			report.retry = await tg("sendPhoto", messageData, token);
+			if (safeParse(report.retry)?.ok) 
+				return null;
+			else
+				return report;
 		} else {
 			return "No attachments";
 		}

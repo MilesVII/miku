@@ -49,27 +49,6 @@ export function wegood(status){
 	return status >= 200 && status < 300;
 }
 
-export function getFileLength(url){
-	return new Promise(resolve => {
-		const headers = url.includes("pximg.net") ? {"Referer": "https://www.pixiv.net/"} : {};
-		const req = https.request(url, {method: "HEAD", headers: headers}, res => {
-			try {
-				resolve({
-					length: parseInt(res.headers["content-length"], 10) || "0",
-					status: res.statusCode
-				});
-			} catch (e) {
-				resolve({
-					length: Infinity,
-					status: res.statusCode
-				});
-			}
-		});
-
-		req.end()
-	});
-}
-
 export function phetch(url, options = {}, payload){
 	return new Promise(resolve => {
 		options.method = options.method || "GET";
