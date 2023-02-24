@@ -32,18 +32,22 @@ export default async function handler(request, response) {
 		quality: q
 	};
 
-	let horns = sharp(original.raw);
-	if (!r) horns = horns.resize(w, h, {fit: "inside"});
-	if (j){
-		horns = horns.jpeg(formatOptions)
-		response.setHeader("Content-Type", "image/jpeg");
-	} else {
-		horns = horns.avif(formatOptions);
-		response.setHeader("Content-Type", "image/avif");
+	try {
+		let horns = sharp(original.raw);
+		if (!r) horns = horns.resize(w, h, {fit: "inside"});
+		if (j){
+			horns = horns.jpeg(formatOptions)
+			response.setHeader("Content-Type", "image/jpeg");
+		} else {
+			horns = horns.avif(formatOptions);
+			response.setHeader("Content-Type", "image/avif");
+		}
+		
+		const data = await horns.toBuffer()
+		
+		response.status(200).end(data);
+	} catch(e){
+		response.status(200).end(original.raw);
 	}
-	
-	const data = await horns.toBuffer()
-	
-	response.status(200).end(data);
 	return;
 }
