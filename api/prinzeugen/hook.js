@@ -25,7 +25,7 @@ export default async function handler(request, response) {
 		const wooo = `${message.from.id}\n${sender} be like\n${message.text}`
 		const re = await tg("sendMessage", {
 			chat_id: me,
-			message_id: message.message_id
+			text: wooo
 		}, token)
 		await tgReport(JSON.stringify(re));
 	}
