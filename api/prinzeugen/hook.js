@@ -11,19 +11,20 @@ export default async function handler(request, response) {
 	const token = process.env.PE_TG_TOKEN_SUPPORT;
 
 	if (message.from.id == me){
-		await tgReport("responding: " + JSON.stringify(message));
 		if (message.reply_to_message){
 			// me responding to ticket
+			const raw = message.reply_to_message.text?.split("\n");
 			const re = await tg("sendMessage", {
-				chat_id: message.reply_to_message.from.id,
+				chat_id: parseInt(raw[0], 10),
 				text: message.text
 			}, token);
 			await tgReport(JSON.stringify(re));
 		}
 	} else {
-		const re = await tg("forwardMessage", {
+		const sender = `${message.from?.first_name || ""} ${message.from?.last_name || ""} ${message.from?.username || ""}`;
+		const wooo = `${message.from.id}\n${sender} be like\n${message.text}`
+		const re = await tg("sendMessage", {
 			chat_id: me,
-			from_chat_id: message.chat.id,
 			message_id: message.message_id
 		}, token)
 		await tgReport(JSON.stringify(re));
