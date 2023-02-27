@@ -20,6 +20,7 @@ export default async function handler(request, response) {
 	const h = request.body?.h || spi(request.query.h) || 1024;
 	const q = request.body?.q || spi(request.query.q) || 70;
 	const j = !!(request.query.jpeg || request.query.j);
+	const m = !!(request.query.mirror || request.query.m);
 	const r = w == 0;
 
 	const original = await phetchV2(url)
@@ -33,6 +34,7 @@ export default async function handler(request, response) {
 	};
 
 	try {
+		if (m) throw 0;
 		let horns = sharp(original.raw);
 		if (!r) horns = horns.resize(w, h, {fit: "inside"});
 		if (j){

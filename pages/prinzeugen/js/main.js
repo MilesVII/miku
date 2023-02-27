@@ -140,8 +140,10 @@ function pullCurtain(lock, message = "Processing request"){
 		
 		let listener;
 		listener = () => {
-			curtain.classList.add("hidden");
-			curtain.removeEventListener("transitionend", listener);
+			if (parseFloat(curtain.style.opacity) == 0){
+				curtain.classList.add("hidden");
+				curtain.removeEventListener("transitionend", listener);
+			}
 		}
 		curtain.addEventListener("transitionend", listener);
 	}

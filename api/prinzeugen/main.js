@@ -258,7 +258,7 @@ async function sendMessage(message, token, target){
 			let firstSkipped = false;
 			let image = message.image[0];
 			let fatto = false;
-			if (type == "img" && fileLength.length > 9 * 1024 * 1024){
+			if (type == "img" && fileLength > 9 * 1024 * 1024){
 				firstSkipped = true;
 				if (message.image[1]){
 					image = message.image[1];
