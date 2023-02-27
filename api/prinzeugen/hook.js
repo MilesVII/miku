@@ -15,7 +15,7 @@ export default async function handler(request, response) {
 		if (message.reply_to_message){
 			// me responding to ticket
 			const re = await tg("sendMessage", {
-				chat_id: message.reply_to_message.id,
+				chat_id: message.reply_to_message.from.id,
 				text: message.text
 			}, token);
 			await tgReport(JSON.stringify(re));
