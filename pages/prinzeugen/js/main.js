@@ -295,6 +295,12 @@ function renderModerable(message, id){
 	}
 	if (message?.raw?.nsfw)
 		tagList.appendChild(renderTag("NSFW", "rgba(200, 0, 0, .3"));
+	if (message?.raw?.tags?.includes("animated"))
+		tagList.appendChild(renderTag("animated", "rgba(50, 50, 200, .3"));
+	if (message?.raw?.tags?.includes("animated_gif"))
+		tagList.appendChild(renderTag("GIF", "rgba(50, 50, 200, .3"));
+	if (message?.raw?.tags?.includes("video"))
+		tagList.appendChild(renderTag("video", "rgba(50, 50, 200, .3"));
 	if (message?.raw?.artists)
 		message.raw.artists.forEach(artist => tagList.appendChild(renderTag(`🎨 ${artist}`, "rgba(250, 250, 250, .7")));
 

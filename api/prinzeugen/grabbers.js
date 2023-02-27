@@ -1,4 +1,4 @@
-import { last, phetch, escapeMarkdown, safeParse, SCH, unique, range, sleep } from "../utils.js";
+import { last, phetch, safeParse, SCH, unique, range, sleep } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
