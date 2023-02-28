@@ -18,6 +18,8 @@ export default async function handler(request, response) {
 				chat_id: parseInt(raw[0], 10),
 				text: message.text
 			}, token);
+		} else {
+			tgReport(JSON.stringify(message));
 		}
 	} else {
 		const sender = `${message.from?.first_name || ""} ${message.from?.last_name || ""} @${message.from?.username || ""}`;
