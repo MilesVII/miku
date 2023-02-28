@@ -68,6 +68,12 @@ const messageSchema = [
 		version: SCH.number,
 		image: SCH.array,
 		links: SCH.array
+	},
+	{//2, telegram preuploaded
+		version: SCH.number,
+		id: SCH.string,
+		type: SCH.string,
+		links: SCH.array
 	}
 ];
 
@@ -222,6 +228,40 @@ async function sendMessage(message, token, target){
 		return "Invalid message schema";
 	}
 
+	function metaSand(type, content, links){
+		let command;
+		const messageData = {
+			chat_id: target,
+			reply_markup: {
+				inline_keyboard: chunk(links, 2)
+			}
+		};
+		switch (type.trim().toLowerCase()){
+			case ("img"): {
+				messageData.photo = content;
+				command = "sendPhoto";
+				break;
+			}
+			case ("gif"): {
+				messageData.animation = content;
+				command = "sendAnimation";
+				break;
+			}
+			case ("vid"): {
+				messageData.video = content;
+				command = "sendVideo";
+				break;
+			}
+			case ("doc"): {
+				messageData.document = content;
+				command = "sendDocument";
+				break;
+			}
+			default: return "Can't detect content type to send to Tg"
+		}
+		return tg(command, messageData, token);
+	}
+
 	if (message.version == 0){
 		message.version = 1;
 		
@@ -255,11 +295,9 @@ async function sendMessage(message, token, target){
 			else
 				type = "vid";
 
-			let firstSkipped = false;
 			let image = message.image[0];
 			let fatto = false;
 			if (type == "img" && fileLength > 9 * 1024 * 1024){
-				firstSkipped = true;
 				if (message.image[1]){
 					image = message.image[1];
 				} else {
@@ -269,40 +307,14 @@ async function sendMessage(message, token, target){
 			}
 
 			const report = {};
-			
-			const messageData = {
-				chat_id: target,
-				reply_markup: {
-					inline_keyboard: chunk(message.links, 2)
-				}
-			};
-			let command;
-			switch (type){
-				case ("img"): {
-					messageData.photo = image;
-					command = "sendPhoto";
-					break;
-				}
-				case ("gif"): {
-					messageData.animation = image;
-					command = "sendAnimation";
-					break;
-				}
-				case ("vid"): {
-					messageData.video = image;
-					command = "sendVideo";
-					break;
-				}
-				default: return "Can't detect content type to send to Tg"
-			}
 
-			report.tg = await tg(command, messageData, token);
+			report.tg = await metaSand(type, image, message.links);
 			if (safeParse(report.tg)?.ok) return null;
 
 			if (type != "img" || fatto)
 				return report;
-			messageData.photo = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
-			report.retry = await tg("sendPhoto", messageData, token);
+			image = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
+			report.retry = await metaSand(type, image, message.links);
 			if (safeParse(report.retry)?.ok) 
 				return null;
 			else
@@ -310,6 +322,11 @@ async function sendMessage(message, token, target){
 		} else {
 			return "No attachments";
 		}
+	}
+	if (message.version == 2){
+		const report = await metaSand(message.type, message.id, message.links);
+		if (safeParse(report)?.ok) return null;
+		return report;
 	}
 	
 	return "WTF is that message version, how did you pass validation";
