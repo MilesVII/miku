@@ -11,7 +11,6 @@ export default async function handler(request, response) {
 	const token = process.env.PE_TG_TOKEN_SUPPORT;
 
 	if (message.from.id == me){
-		await tgReport(JSON.stringify(message));
 		if (message.reply_to_message){
 			// me responding to ticket
 			const raw = message.reply_to_message.text?.split("\n");
