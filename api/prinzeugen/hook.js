@@ -19,7 +19,7 @@ export default async function handler(request, response) {
 				text: message.text
 			}, token);
 		} else {
-			tgReport(JSON.stringify(message));
+			await tgReport(JSON.stringify(message));
 		}
 	} else {
 		const sender = `${message.from?.first_name || ""} ${message.from?.last_name || ""} @${message.from?.username || ""}`;
