@@ -134,7 +134,7 @@ img {
 }
 
 .rightPreviewArea {
-	width: 60%;
+	width: 40%;
 }
 
 .aiSelector {
@@ -178,7 +178,7 @@ img {
 }
 
 .previewImage, .previewImageBig {
-	width: 30%;
+	width: 50%;
 	border-radius: var(--small-round);
 	margin: var(--small-space);
 	display: flex;
@@ -190,7 +190,7 @@ img {
 }
 
 .previewImage > img {
-	max-height: 32vh;
+	max-height: 52vh;
 }
 
 .previewImageBig > img {
