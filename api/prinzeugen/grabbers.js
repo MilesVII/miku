@@ -94,6 +94,8 @@ async function twtGetTweets(token, userId, offset, pagination){
 
 	if (!response) return null;
 
+	if (response.meta.newest_id == response.meta.oldest_id) return [];
+
 	const additionalBatch = response.meta.next_token ? (await twtGetTweets(token, userId, offset, response.meta.next_token)) : [];
 
 	const imagesRaw = (response?.includes?.media || []).filter(m => m.type == "photo");

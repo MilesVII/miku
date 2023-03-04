@@ -160,7 +160,7 @@ async function authorize(userData){
 	loadGrabbers(userData.grabbers);
 	loadModerables(userData.moderables);
 
-	report(`You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
+	report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
 }
 
 async function login(){

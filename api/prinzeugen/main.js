@@ -1,7 +1,16 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, getFileLength, parseTelegramTarget, SCH, validate, wegood } from "../utils.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, SCH, validate, wegood, escapeMarkdown } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
+const NINE_MB = 9 * 1024 * 1024;
+const PUB_FLAGS = {
+	ALLOW_IMG_ONLY: "imgonly",
+	URL_AS_TARGET: "urlastarget",
+	USE_PROXY: "useproxy",
+	NO_SIZE_LIMIT: "nosizelimit",
+	KEEP_AFTER_POST: "keep"
+};
+const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${url}`;
 
 const schema = {
 	debug:{},
@@ -54,7 +63,6 @@ const schema = {
 		user: SCH.number,
 		userToken: SCH.string,
 		target: SCH.string
-		//id can also be specified
 	}
 };
 
@@ -222,8 +230,82 @@ async function userAccessAllowed(id, token){
 	return user && user[0] && (user[0]["access_token"] == token || user[0]["access_token"] == null);
 }
 
+async function pingContentUrl(url){
+	const meta = await phetchV2(url, {method: "HEAD"});
+	if (meta.status != 200) return null;
+
+	const typeRaw = meta.headers["content-type"] || "image/dunno";
+	let type;
+	if (typeRaw.startsWith("image/") && typeRaw != "image/gif")
+		type = "img";
+	else if (typeRaw == "image/gif")
+		type = "gif";
+	else
+		type = "vid";
+	
+	return {
+		length: parseInt(meta.headers["content-length"] || "0", 10),
+		type: type
+	}
+}
+
+async function publish2URL(message, target, flags, extras = {}){
+	function linksToMarkdown(links){
+		return links
+			.map(button => {console.log(button); return `[${escapeMarkdown(button.text)}](${escapeMarkdown(button.url)})`; })
+			.join(" ");
+	}
+
+	if (!validate(messageSchema[1], message)){
+		return "Invalid or unsupported message schema";
+	}
+	const imgOnly = flags.includes(PUB_FLAGS.ALLOW_IMG_ONLY);
+	const useProxy = flags.includes(PUB_FLAGS.USE_PROXY);
+	const anySize = flags.includes(PUB_FLAGS.NO_SIZE_LIMIT);
+
+	if (message.image.length == 0) return "No attachments";
+	const rawVariants = message.image;
+	const prxVariants = message.image.map(l => imageProxy(l));
+	const variants = (useProxy ? [] : rawVariants).concat(prxVariants);
+	
+	let content = null;
+	for (let v of variants){
+		const meta = await pingContentUrl(v);
+		if (
+			meta &&
+			!(imgOnly && (meta.type != "img")) &&
+			(anySize || meta.length < NINE_MB)
+		){
+			content = v;
+			break;
+		}
+	}
+	if (content){
+		const extraLink = {
+			text: "More",
+			url: extras.link
+		};
+		if (extras.link){
+			message.links.push(extraLink);
+		}
+
+		const payload = {
+			url: content,
+			caption: linksToMarkdown(message.links)
+		};
+		const response = await phetchV2(target, {
+			method: "POST"
+		}, payload);
+		if (wegood(response.status))
+			return null;
+		else
+			return response;
+	} else
+		return "No usable content found"
+}
+
 //return null on success or any object on error
-async function sendMessage(message, token, target){
+async function publish2Telegram(message, token, target, flags){
 	if (!validate(messageSchema[message.version], message)){
 		return "Invalid message schema";
 	}
@@ -282,39 +364,30 @@ async function sendMessage(message, token, target){
 	}
 	if (message.version == 1){
 		if (message.image.length > 0){
-			const meta = await phetchV2(message.image[0], {method: "HEAD"});
-			if (meta.status != 200) return "No head?";
-			
-			const fileLength = parseInt(meta.headers["content-length"] || "0", 10);
-			const typeRaw = meta.headers["content-type"] || "image/dunno";
-			let type;
-			if (typeRaw.startsWith("image/") && typeRaw != "image/gif")
-				type = "img";
-			else if (typeRaw == "image/gif")
-				type = "gif";
-			else
-				type = "vid";
+			const meta = await pingContentUrl(message.image[0]);
+			if (!meta) return "No head?";
+			let usingProxy = flags.includes(PUB_FLAGS.USE_PROXY);
 
-			let image = message.image[0];
-			let fatto = false;
-			if (type == "img" && fileLength > 9 * 1024 * 1024){
+			let content = message.image[0];
+			if (meta.type == "img" && usingProxy) content = imageProxy(content);
+			if (meta.type == "img" && !usingProxy && meta.length > NINE_MB){
 				if (message.image[1]){
-					image = message.image[1];
+					content = message.image[1];
 				} else {
-					image = `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${image}`;
-					fatto = true;
+					content = imageProxy(content);
+					usingProxy = true;
 				}
 			}
 
 			const report = {};
 
-			report.tg = await metaSand(type, image, message.links);
+			report.tg = await metaSand(meta.type, content, message.links);
 			if (safeParse(report.tg)?.ok) return null;
 
-			if (type != "img" || fatto)
+			if (meta.type != "img" || usingProxy)
 				return report;
-			image = `https://mikumiku.vercel.app/api/imgproxy?j=1&w=0&url=${messageData.photo}`;
-			report.retry = await metaSand(type, image, message.links);
+			content = imageProxy(content);
+			report.retry = await metaSand(meta.type, content, message.links);
 			if (safeParse(report.retry)?.ok) 
 				return null;
 			else
@@ -503,16 +576,11 @@ export default async function handler(request, response) {
 			break;
 		}
 		case ("publish"): {
-			//User can inject filters by abusing target or id properties, but the result of query will be processed on server anyways
+			const flags = request.body.flags?.map(f => f.trim().toLowerCase()) || [];
+
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
 			const failFilter = idFilter ? "" : "&failed=eq.false";
 			const url = `/rest/v1/pool?approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token)`;
-
-			const target = parseTelegramTarget(request.body.target);
-			if (!target){
-				response.status(400).send("Can't parse telegram target");
-				return;
-			}
 
 			let availablePosts = await db(url);
 			if (!availablePosts){
@@ -528,6 +596,12 @@ export default async function handler(request, response) {
 				return;
 			}
 
+			const target = parseTelegramTarget(request.body.target);
+			if (!target && !flags.includes(PUB_FLAGS.URL_AS_TARGET)){
+				response.status(400).send("Can't parse telegram target");
+				return;
+			}
+
 			const selectedPosts = [];
 			const count = safe(() => parseInt(request.body.count, 10)) || 1;
 			for (let _ = 0; _ < count && availablePosts.length > 0; ++_){
@@ -537,7 +611,11 @@ export default async function handler(request, response) {
 			}
 
 			for (const post of selectedPosts){
-				const error = await sendMessage(post.message, post["users"]["tg_token"], target);
+				
+				const error = flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
+					await publish2URL(post.message, request.body.target, flags, request.body.extras)
+				:
+					await publish2Telegram(post.message, post["users"]["tg_token"], target, flags);
 
 				if (error){
 					await Promise.allSettled([
@@ -550,12 +628,14 @@ export default async function handler(request, response) {
 						)
 					]);
 				} else {
-					await db(
-						`/rest/v1/pool?id=eq.${post.id}`,
-						"DELETE",
-						null,
-						null
-					);
+					if (!flags.includes(PUB_FLAGS.KEEP_AFTER_POST)){
+						await db(
+							`/rest/v1/pool?id=eq.${post.id}`,
+							"DELETE",
+							null,
+							null
+						);
+					}
 				}
 			}
 
