@@ -120,7 +120,7 @@ img {
 	display: flex;
 	margin: 0 2% 1vw 2%;
 	flex-flow: row wrap;
-	align-items: baseline;
+	align-items: center;
 	width: 100%
 }
 

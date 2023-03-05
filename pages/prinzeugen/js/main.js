@@ -159,6 +159,8 @@ async function authorize(userData){
 
 	document.querySelector("#stg_access").value = "";
 	document.querySelector("#stg_tg").value = userData.tg_token;
+	document.querySelector("#stg_additional").value = userData.additional;
+	updateSettingsFlicker();
 
 	loadGrabbers(userData.grabbers);
 	loadModerables(userData.moderables);
@@ -546,14 +548,36 @@ async function loadMessagePool(page = 0){
 	pullCurtain(false);
 }
 
+function updateSettingsFlicker(){
+	const textarea = document.querySelector("#stg_additional");
+	const flicker = document.querySelector("#stg_flicker");
+	const contents = textarea.value.trim();
+
+	if (textarea.value.trim()){
+		const parsed = safe(() => JSON.parse(contents));
+		if (parsed == null){
+			flicker.textContent = "Not JSON";
+			flicker.style.backgroundColor = "hsla(20, 72%, 23%, .42)";
+		} else {
+			flicker.textContent = "JSON";
+			flicker.style.backgroundColor = "hsla(100, 72%, 23%, .42)";
+		}
+	} else {
+		flicker.textContent = "Empty";
+		flicker.style.backgroundColor = "hsla(0, 0%, 60%, .42)";
+	}
+}
+
 async function saveSettings(){
 	const newPassword = document.querySelector("#stg_access").value.trim() || null;
 	const tgToken = document.querySelector("#stg_tg").value || null;
+	const additionals = document.querySelector("#stg_additional").value;
 
 	pullCurtain(true);
 	await callAPI("saveSettings", {
 		newUserToken: newPassword,
-		newTgToken: tgToken
+		newTgToken: tgToken,
+		additionalData: additionals
 	}, true);
 	if (newPassword) signOut();
 	pullCurtain(false);

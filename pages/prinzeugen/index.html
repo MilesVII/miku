@@ -239,6 +239,12 @@
 							<input type="text" id="stg_tg" class="wide"></input>
 						</span>
 					</div>
+					<div class="row flexCenter">
+						<span class="col halfWide">Additional data<br /><span id="stg_flicker" class="tag"></span></span>
+						<span class="col halfWide">
+							<textarea id="stg_additional" class="wide" oninput="updateSettingsFlicker()"></textarea>
+						</span>
+					</div>
 					<div class="button wideButton" onclick="saveSettings()">Save</div>
 					<div class="button wideButton" onclick="signOut()">Sign out</div>
 				</div>

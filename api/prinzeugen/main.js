@@ -22,7 +22,8 @@ const schema = {
 		user: SCH.number,
 		userToken: SCH.string,
 		newUserToken: SCH.any,
-		newTgToken: SCH.any
+		newTgToken: SCH.any,
+		additionalData: SCH.string
 	},
 	setGrabbers: {
 		user: SCH.number,
@@ -460,7 +461,9 @@ export default async function handler(request, response) {
 				response.status(401).send("Wrong user id or access token");
 				return;
 			}
-			const delta = {};
+			const delta = {
+				additional: request.body.additionalData
+			};
 			if (request.body.newUserToken) delta.access_token = hashPassword(request.body.newUserToken);
 			if (request.body.newTgToken) delta.tg_token = request.body.newTgToken;
 			
