@@ -337,8 +337,10 @@ async function publish2Telegram(message, token, target, extras, flags){
 			chat_id: target,
 			reply_markup: (flags.includes(PUB_FLAGS.CUSTOM_BUTTONS) && customMarkup) ? customMarkup : defaultMarkup
 		};
-		if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS))
+		if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS)){
 			messageData.caption = linksToMarkdown(links);
+			messageData.parse_mode = "MarkdownV2"
+		}
 		switch (type.trim().toLowerCase()){
 			case ("img"): {
 				messageData.photo = content;
