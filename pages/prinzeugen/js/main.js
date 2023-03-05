@@ -1,5 +1,7 @@
 let pageLock = false;
 
+const PLACEHOLDER_URL = "placeholder.png";
+
 const AI_SCORES = [3, 1, 0, -1, -3];
 const AI_STYLE_CLASSES = ["aivote_4", "aivote_3", "aivote_2", "aivote_1", "aivote_0", "aivote_skip"]
 let aiMode = false;
@@ -119,6 +121,7 @@ async function callAPI(action, data, useLogin = true){
 
 	return {
 		status: response.status,
+		headers: response.headers,
 		data: payload
 	};
 }
@@ -453,6 +456,93 @@ async function postManual(){
 	pullCurtain(true);
 	const response = await callAPI("manual", {posts: posts}, true);
 	if (response.status == 200) document.querySelector("#manual_post").value = "";
+	pullCurtain(false);
+}
+
+function setPreviewPost(row){
+	const main = document.querySelector("#poolPostMain");
+	const preview = main.querySelector("img");
+	preview.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
+
+	const links = main.querySelector("#poolPostLinks");
+	links.innerHTML = "";
+	for (let link of row?.message?.links || []){
+		const proto = fromTemplate("poolPostLink");
+		proto.href = link.url;
+		proto.textContent = link.text;
+		links.appendChild(proto);
+	}
+
+	const controls = main.querySelector("#poolPostControls");
+	controls.innerHTML = "";
+
+	if (row){
+		const unsch = fromTemplate("poolButton");
+		unsch.textContent = "Unschedule";
+		unsch.addEventListener("click", () => unschedulePost(row));
+
+		const copyd = fromTemplate("poolButton");
+		copyd.textContent = "Show row data in console";
+		copyd.addEventListener("click", () => console.log(row));
+
+		controls.appendChild(unsch);
+		controls.appendChild(copyd);
+	}
+
+	preview.scrollIntoView({behavior: "smooth", block: "center"})
+}
+
+async function unschedulePost(row){
+	if (!row?.id) return;
+	pullCurtain(true);
+	const response = await callAPI("unschedulePost", {
+		id: row.id
+	}, true);
+
+	if (response.status < 300){
+		setPreviewPost(null);
+		const remTarget = Array.from(document.querySelectorAll(".poolPreviewItem")).find(e => e.dataset.id == row.id);
+		remTarget.remove();
+	}
+	pullCurtain(false);
+}
+
+async function loadMessagePool(page = 0){
+	const STRIDE = 64;
+	const container = document.querySelector(".poolPreviewContainer");
+	container.innerHTML = "";
+
+	pullCurtain(true);
+	const rows = await callAPI("getPoolPage", {
+		page: page,
+		stride: STRIDE
+	}, true);
+
+	for (let row of rows.data.rows){
+		const proto = fromTemplate("poolPreviewItem");
+		proto.dataset.id = row.id;
+		const img = proto.querySelector("img");
+		if (row.message.version == 1){
+			img.src = row.message.raw?.preview || row.message.image[0];
+		} else {
+			img.src = PLACEHOLDER_URL;
+		}
+		img.addEventListener("click", () => setPreviewPost(row));
+		
+		container.appendChild(proto);
+	}
+
+	const pager = document.querySelector("#poolPageControls");
+	pager.innerHTML = "";
+	const postCount = rows.data.count;
+	const pageCount = Math.ceil(postCount / STRIDE);
+	for (let i = 0; i < pageCount; ++i){
+		const pageSelector = fromTemplate("poolButton");
+		pageSelector.textContent = i + 1;
+		pageSelector.addEventListener("click", () => loadMessagePool(i));
+		pager.appendChild(pageSelector);
+	}
+
 	pullCurtain(false);
 }
 

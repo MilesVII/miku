@@ -44,6 +44,10 @@ const schema = {
 	getPool: {
 		user: SCH.number
 	},
+	getPoolPage: {
+		user: SCH.number,
+		page: SCH.number
+	},
 	moderate: {
 		user: SCH.number,
 		userToken: SCH.string,
@@ -53,6 +57,11 @@ const schema = {
 		user: SCH.number,
 		userToken: SCH.string,
 		messages: SCH.array
+	},
+	unschedulePost: {
+		user: SCH.number,
+		userToken: SCH.string,
+		id: SCH.number
 	},
 	manual: {
 		user: SCH.number,
@@ -109,11 +118,15 @@ function db2(url, method, headers, body){
 	}, body ? JSON.stringify(body) : null);
 }
 
+function renderContentRange(from, to){
+	return `${from}-${to - 1}`;
+}
+
 function parseContentRange(range){
 	try {
 		const parts = range.split("/");
 		const leftParts = parts[0].split("-");
-		let proto = {
+		const proto = {
 			from: parseInt(leftParts[0], 10),
 			to: parseInt(leftParts[1], 10) + 1,
 			count: parseInt(parts[1], 10)
@@ -516,6 +529,24 @@ export default async function handler(request, response) {
 			response.status(200).send(rows);
 			return;
 		}
+		case ("getPoolPage"): {
+			const stride = request.body.stride || 100;
+			const page = request.body.page;
+			const rows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {
+				"Prefer": "count=exact",
+				"Range": renderContentRange(page * stride, (page + 1) * stride)
+			});
+			if (wegood(rows.status)) {
+				response.status(200).send({
+					count: parseContentRange(rows.headers["content-range"]).count,
+					rows: rows.body
+				});
+				return;
+			} else {
+				response.status(503).send();
+				return;
+			}
+		}
 		case ("moderate"): {
 			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
 				response.status(401).send("Wrong user id or access token");
@@ -558,6 +589,22 @@ export default async function handler(request, response) {
 
 			response.status(200).send(r);
 			break;
+		}
+		case ("unschedulePost"): {
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+			
+			const re = await db2(
+				`/rest/v1/pool?user=eq.${request.body.user}&id=eq.${request.body.id}`,
+				"DELETE",
+				null,
+				null
+			);
+			const status = wegood(re.status) ? 200 : re.status;
+			response.status(status).send();
+			return;
 		}
 		case ("manual"): {
 			const messages = request.body.posts.map(post => post.grab ? null : {

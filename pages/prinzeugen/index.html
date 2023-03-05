@@ -135,15 +135,16 @@
 		<div id="curtain" class="hidden" style="opacity:0;"></div>
 		<div id="login">
 			<input type="number" id="login_id" class="wide" placeholder="User ID"></input>
-			<input type="text" id="login_token" class="wide" placeholder="Access token"></input>
+			<input type="text" id="login_token" class="wide" placeholder="Password"></input>
 			<div class="button wideButton" onclick="login()">Login</div>
 		</div>
 		<div id="authorized" class="hidden">
 			<div class="tabbar">
 				<span data-target="dsb" class="tab button">Dashboard</span>
 				<span data-target="gbs" class="tab button">Grabbers</span>
-				<span data-target="mnl" class="tab button">Manual</span>
+				<span data-target="mnl" class="tab button">Schedule</span>
 				<span data-target="mdr" class="tab button">Moderation</span>
+				<span data-target="pol" class="tab button">Pool</span>
 				<span data-target="stg" class="tab button">Settings</span>
 			</div>
 			<div id="main">
@@ -173,6 +174,7 @@
 				</div>
 
 				<div id="mnl" class="tabtarget page hidden">
+					<div>Manually add posts to the posting pool providing a set of content URLs and links</div>
 					<div>Links to image come first, should start with http</div>
 					<!--<div>glb://[post id] for automating Gelbooru grab</div>
 					<div>twt://[post id] for automating Twitter grab</div>-->
@@ -194,13 +196,39 @@
 					<div id="mdr_list"></div>
 				</div>
 
+				<div id="pol" class="tabtarget page hidden">
+					<template id="poolPostLink">
+						<a target="_blank" class="button"></a>
+					</template>
+					<template id="poolButton">
+						<span class="button"></span>
+					</template>
+					<template id="poolPreviewItem">
+						<div class="poolPreviewItem">
+							<img src="placeholder.png" />
+						</div>
+					</template>
+					<div id="poolPostMain" class="section">
+						<div class="row flexCenter">
+							<img class="poolMainPreview" src="placeholder.png"></img>
+						</div>
+						
+						<div id="poolPostLinks" class="row flexCenter"></div>
+						<div id="poolPostControls"class="row flexCenter"></div>
+					</div>
+					<div id="poolPageControls" class="row flexCenter">
+						<span id="poolLoader" class="button" onclick="loadMessagePool()">Load pool</span>
+					</div>
+					<div class="poolPreviewContainer"></div>
+				</div>
+
 				<div id="stg" class="tabtarget page hidden">
 					<div class="row flexCenter">
 						<span class="col halfWide">
-							Access token
+							Password
 						</span>
 						<span class="col halfWide">
-							<input type="text" id="stg_access" class="wide" placeholder="Leave empty to keep old token"></input>
+							<input type="text" id="stg_access" class="wide" placeholder="Leave empty to keep old password"></input>
 						</span>
 					</div>
 					<div class="row flexCenter">
