@@ -8,7 +8,9 @@ const PUB_FLAGS = {
 	URL_AS_TARGET: "urlastarget",
 	USE_PROXY: "useproxy",
 	NO_SIZE_LIMIT: "nosizelimit",
-	KEEP_AFTER_POST: "keep"
+	KEEP_AFTER_POST: "keep",
+	CUSTOM_BUTTONS: "custombuttons",
+	MARKDOWN_LINKS: "markdownlinks"
 };
 const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${url}`;
 
@@ -263,13 +265,13 @@ async function pingContentUrl(url){
 	}
 }
 
-async function publish2URL(message, target, flags, extras = {}){
-	function linksToMarkdown(links){
-		return links
-			.map(button => {console.log(button); return `[${escapeMarkdown(button.text)}](${escapeMarkdown(button.url)})`; })
-			.join(" ");
-	}
+function linksToMarkdown(links){
+	return links
+		.map(button => {console.log(button); return `[${escapeMarkdown(button.text)}](${escapeMarkdown(button.url)})`; })
+		.join(" ");
+}
 
+async function publish2URL(message, target, flags, extras = {}){
 	if (!validate(messageSchema[1], message)){
 		return "Invalid or unsupported message schema";
 	}
@@ -319,19 +321,24 @@ async function publish2URL(message, target, flags, extras = {}){
 }
 
 //return null on success or any object on error
-async function publish2Telegram(message, token, target, flags){
+async function publish2Telegram(message, token, target, extras, flags){
 	if (!validate(messageSchema[message.version], message)){
 		return "Invalid message schema";
 	}
 
 	function metaSand(type, content, links){
 		let command;
+		const defaultMarkup = {
+			inline_keyboard: chunk(links, 2)
+		};
+		const customMarkup = safeParse(extras);
+
 		const messageData = {
 			chat_id: target,
-			reply_markup: {
-				inline_keyboard: chunk(links, 2)
-			}
+			reply_markup: (flags.includes(PUB_FLAGS.CUSTOM_BUTTONS) && customMarkup) ? customMarkup : defaultMarkup
 		};
+		if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS))
+			messageData.caption = linksToMarkdown(links);
 		switch (type.trim().toLowerCase()){
 			case ("img"): {
 				messageData.photo = content;
@@ -630,7 +637,7 @@ export default async function handler(request, response) {
 
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
 			const failFilter = idFilter ? "" : "&failed=eq.false";
-			const url = `/rest/v1/pool?approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token)`;
+			const url = `/rest/v1/pool?approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token,additional)`;
 
 			let availablePosts = await db(url);
 			if (!availablePosts){
@@ -665,7 +672,7 @@ export default async function handler(request, response) {
 				const error = flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
 					await publish2URL(post.message, request.body.target, flags, request.body.extras)
 				:
-					await publish2Telegram(post.message, post["users"]["tg_token"], target, flags);
+					await publish2Telegram(post.message, post["users"]["tg_token"], target, post["users"]["additional"], flags);
 
 				if (error){
 					await Promise.allSettled([
