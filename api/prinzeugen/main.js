@@ -267,7 +267,7 @@ async function pingContentUrl(url){
 
 function linksToMarkdown(links){
 	return links
-		.map(button => {console.log(button); return `[${escapeMarkdown(button.text)}](${escapeMarkdown(button.url)})`; })
+		.map(button => `[${escapeMarkdown(button.text)}](${escapeMarkdown(button.url)})`)
 		.join(" ");
 }
 
@@ -321,7 +321,7 @@ async function publish2URL(message, target, flags, extras = {}){
 }
 
 //return null on success or any object on error
-async function publish2Telegram(message, token, target, extras, flags){
+async function publish2Telegram(message, token, target, extras = {}, additionalData, flags){
 	if (!validate(messageSchema[message.version], message)){
 		return "Invalid message schema";
 	}
@@ -331,16 +331,33 @@ async function publish2Telegram(message, token, target, extras, flags){
 		const defaultMarkup = {
 			inline_keyboard: chunk(links, 2)
 		};
-		const customMarkup = safeParse(extras);
+		const customMarkup = safeParse(additionalData);
 
 		const messageData = {
 			chat_id: target,
 			reply_markup: (flags.includes(PUB_FLAGS.CUSTOM_BUTTONS) && customMarkup) ? customMarkup : defaultMarkup
 		};
+
 		if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS)){
 			messageData.caption = linksToMarkdown(links);
 			messageData.parse_mode = "MarkdownV2"
 		}
+
+		if (extras.extraLink){
+			const extraLink = {
+				text: "More: PrinzEugen",
+				url: extras.extraLink
+			};
+			if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS)){
+				const md = linksToMarkdown([extraLink]);
+				messageData.caption += `\n${md}`;
+			} else {
+				//todo
+				//message.links.push(extraLink);
+				//messageData.reply_markup.inline_keyboard.push([extraLink]);
+			}
+		}
+
 		switch (type.trim().toLowerCase()){
 			case ("img"): {
 				messageData.photo = content;
@@ -671,10 +688,10 @@ export default async function handler(request, response) {
 
 			for (const post of selectedPosts){
 				
-				const error = flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
+				const error = /* flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
 					await publish2URL(post.message, request.body.target, flags, request.body.extras)
 				:
-					await publish2Telegram(post.message, post["users"]["tg_token"], target, post["users"]["additional"], flags);
+					*/ await publish2Telegram(post.message, post["users"]["tg_token"], target, request.body.extras, post["users"]["additional"], flags);
 
 				if (error){
 					await Promise.allSettled([
