@@ -271,6 +271,12 @@ function linksToMarkdown(links){
 		.join(" ");
 }
 
+function linksToMarkup(links){
+	return {
+		inline_keyboard: chunk(links, 2)
+	};
+}
+
 async function publish2URL(message, target, flags, extras = {}){
 	if (!validate(messageSchema[1], message)){
 		return "Invalid or unsupported message schema";
@@ -321,43 +327,53 @@ async function publish2URL(message, target, flags, extras = {}){
 }
 
 //return null on success or any object on error
-async function publish2Telegram(message, token, target, extras = {}, additionalData, flags){
+async function publish2Telegram(message, token, target, extras = {}, flags){
+	console.log(extras);
 	if (!validate(messageSchema[message.version], message)){
 		return "Invalid message schema";
 	}
 
 	function metaSand(type, content, links){
-		let command;
-		const defaultMarkup = {
-			inline_keyboard: chunk(links, 2)
-		};
-		const customMarkup = safeParse(additionalData);
+		const useMarkdownLinks = flags.includes(PUB_FLAGS.MARKDOWN_LINKS) || extras.customMarkup;
 
 		const messageData = {
-			chat_id: target,
-			reply_markup: (flags.includes(PUB_FLAGS.CUSTOM_BUTTONS) && customMarkup) ? customMarkup : defaultMarkup
+			chat_id: target
 		};
 
-		if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS)){
+		if (useMarkdownLinks){
 			messageData.caption = linksToMarkdown(links);
 			messageData.parse_mode = "MarkdownV2"
+		} else {
+			messageData.reply_markup = linksToMarkup(links)
+		}
+
+		if (extras.customMarkup){
+			messageData.reply_markup = extras.customMarkup
 		}
 
 		if (extras.extraLink){
-			const extraLink = {
-				text: "More: PrinzEugen",
-				url: extras.extraLink
-			};
-			if (flags.includes(PUB_FLAGS.MARKDOWN_LINKS)){
-				const md = linksToMarkdown([extraLink]);
-				messageData.caption += `\n${md}`;
-			} else {
-				//todo
-				//message.links.push(extraLink);
-				//messageData.reply_markup.inline_keyboard.push([extraLink]);
+			let appendix = null;
+			if (typeof extras.extraLink == "string"){
+				appendix = {
+					text: "More",
+					url: extras.extraLink
+				};
+			} else if (extras.extraLink.text && extras.extraLink.url){
+				appendix = extras.extraLink;
+			}
+
+			if (appendix){
+				if (useMarkdownLinks){
+					const md = linksToMarkdown([appendix]);
+					messageData.caption += `\n${md}`;
+				} else {
+					links.push(appendix);
+					messageData.reply_markup = linksToMarkup(links);
+				}
 			}
 		}
 
+		let command;
 		switch (type.trim().toLowerCase()){
 			case ("img"): {
 				messageData.photo = content;
@@ -691,7 +707,7 @@ export default async function handler(request, response) {
 				const error = /* flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
 					await publish2URL(post.message, request.body.target, flags, request.body.extras)
 				:
-					*/ await publish2Telegram(post.message, post["users"]["tg_token"], target, request.body.extras, post["users"]["additional"], flags);
+					*/ await publish2Telegram(post.message, post["users"]["tg_token"], target, request.body.extras, flags);
 
 				if (error){
 					await Promise.allSettled([
