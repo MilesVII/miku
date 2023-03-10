@@ -328,7 +328,6 @@ async function publish2URL(message, target, flags, extras = {}){
 
 //return null on success or any object on error
 async function publish2Telegram(message, token, target, extras = {}, flags){
-	console.log(extras);
 	if (!validate(messageSchema[message.version], message)){
 		return "Invalid message schema";
 	}
