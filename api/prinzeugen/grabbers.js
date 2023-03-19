@@ -1,4 +1,4 @@
-import { last, phetch, safeParse, SCH, unique, range, sleep } from "../utils.js";
+import { last, phetch, safeParse, unique, range, sleep } from "../utils.js";
 
 function buildURLParams(params){
 	return Object.keys(params)
@@ -193,14 +193,14 @@ export const grabbersMeta = {
 	"twitter": {
 		schema: {
 			credentials: {
-				token: SCH.string
+				token: "string"
 			},
 			config: {
-				username: SCH.string,
-				moderated: SCH.bool
+				username: "string",
+				moderated: "boolean"
 			},
 			state: {
-				lastSeen: SCH.string
+				lastSeen: "string"
 			}
 		},
 		action: async grabber => {
@@ -217,17 +217,17 @@ export const grabbersMeta = {
 	"gelbooru": {
 		schema: {
 			credentials: {
-				user: SCH.number,
-				token: SCH.string
+				user: "number",
+				token: "string"
 			},
 			config: {
-				tags: SCH.array,
-				whites: SCH.array,
-				blacks: SCH.array,
-				moderated: SCH.bool
+				tags: "array",
+				whites: "array",
+				blacks: "array",
+				moderated: "boolean"
 			},
 			state: {
-				lastSeen: SCH.number
+				lastSeen: "number"
 			}
 		},
 		action: async (grabber, skipArtists = false) => {

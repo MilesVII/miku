@@ -1,5 +1,6 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, SCH, validate, wegood, escapeMarkdown } from "../utils.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
+import { validate, ARRAY_OF } from "arstotzka"; 
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 const NINE_MB = 9 * 1024 * 1024;
@@ -17,83 +18,86 @@ const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${ur
 const schema = {
 	debug:{},
 	login: {
-		user: SCH.number,
-		userToken: SCH.string
+		user: "number",
+		userToken: "string"
 	},
 	saveSettings: {
-		user: SCH.number,
-		userToken: SCH.string,
-		newUserToken: SCH.any,
-		newTgToken: SCH.any,
-		additionalData: SCH.string
+		user: "number",
+		userToken: "string",
+		newUserToken: [],
+		newTgToken: [],
+		additionalData: "string"
 	},
 	setGrabbers: {
-		user: SCH.number,
-		userToken: SCH.string,
-		grabbers: SCH.array
+		user: "number",
+		userToken: "string",
+		grabbers: "array"
 	},
 	getGrabbers: {
-		user: SCH.number,
-		userToken: SCH.string
+		user: "number",
+		userToken: "string"
 	},
 	grab: {
-		user: SCH.number,
-		userToken: SCH.string
+		user: "number",
+		userToken: "string"
 	},
 	getModerables: {
-		user: SCH.number,
-		userToken: SCH.string
+		user: "number",
+		userToken: "string"
 	},
 	getPool: {
-		user: SCH.number
+		user: "number"
 	},
 	getPoolPage: {
-		user: SCH.number,
-		page: SCH.number
+		user: "number",
+		page: "number"
 	},
 	moderate: {
-		user: SCH.number,
-		userToken: SCH.string,
-		decisions: SCH.array
+		user: "number",
+		userToken: "string",
+		decisions: "array"
 	},
 	post: {
-		user: SCH.number,
-		userToken: SCH.string,
-		messages: SCH.array
+		user: "number",
+		userToken: "string",
+		messages: "array"
 	},
 	unschedulePost: {
-		user: SCH.number,
-		userToken: SCH.string,
-		id: SCH.number
+		user: "number",
+		userToken: "string",
+		id: "number"
 	},
 	manual: {
-		user: SCH.number,
-		userToken: SCH.string,
-		posts: SCH.array
+		user: "number",
+		userToken: "string",
+		posts: "array"
 	},
 	publish: {
-		user: SCH.number,
-		userToken: SCH.string,
-		target: SCH.string
+		user: "number",
+		userToken: "string",
+		target: "string"
 	}
 };
 
 const messageSchema = [
 	{//0, deprecated version, publisher depends on it's 'raw' property to convert to newer version
-		version: SCH.number,
-		attachments: SCH.array,
-		caption: SCH.string
+		version: "number",
+		attachments: "array",
+		caption: "string"
 	},
 	{//1
-		version: SCH.number,
-		image: SCH.array,
-		links: SCH.array
+		version: "number",
+		image: ARRAY_OF("string"),
+		links: ARRAY_OF({
+			text: "string",
+			url: "string"
+		})
 	},
 	{//2, telegram preuploaded
-		version: SCH.number,
-		id: SCH.string,
-		type: SCH.string,
-		links: SCH.array
+		version: "number",
+		id: "string",
+		type: "string",
+		links: "array"
 	}
 ];
 
@@ -223,7 +227,7 @@ function validateGrabber(grabber){
 	const schema = grabbersMeta[grabber?.type]?.schema;
 	return (
 		grabber.type && schema &&
-		validate(schema, grabber)
+		validate(grabber, schema).length > 0
 	);
 }
 
@@ -278,7 +282,7 @@ function linksToMarkup(links){
 }
 
 async function publish2URL(message, target, flags, extras = {}){
-	if (!validate(messageSchema[1], message)){
+	if (validate(message, messageSchema[1]).length > 0){
 		return "Invalid or unsupported message schema";
 	}
 	const imgOnly = flags.includes(PUB_FLAGS.ALLOW_IMG_ONLY);
@@ -328,8 +332,9 @@ async function publish2URL(message, target, flags, extras = {}){
 
 //return null on success or any object on error
 async function publish2Telegram(message, token, target, extras = {}, flags){
-	if (!validate(messageSchema[message.version], message)){
-		return "Invalid message schema";
+	const validationErrors = validate(message, messageSchema[message.version]);
+	if (validationErrors.length > 0){
+		return validationErrors;
 	}
 
 	function metaSand(type, content, links){
@@ -469,8 +474,9 @@ export default async function handler(request, response) {
 		response.status(400).send(`Unknown action: ${request.body?.action}\nRqBody: ${JSON.stringify(request.body)}`);
 		return;
 	}
-	if (!validate(schema[request.body.action], request.body)){
-		response.status(400).send("Invalid action schema");
+	const validationErrors = validate(request.body, schema[request.body.action]);
+	if (validationErrors.length > 0){
+		response.status(400).send(validationErrors);
 		return;
 	}
 	if (request.body.userToken) request.body.userToken = hashPassword(request.body.userToken);
@@ -598,10 +604,10 @@ export default async function handler(request, response) {
 			}
 			
 			const decisionSchema = {
-				id: SCH.number,
-				approved: SCH.bool
+				id: "number",
+				approved: "boolean"
 			};
-			const decisions = request.body.decisions.filter(d => validate(decisionSchema, d));
+			const decisions = request.body.decisions.filter(d => validate(d, decisionSchema).length == 0);
 			
 			await db(`/rest/v1/pool?approved=is.null&user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, decisions);
 			await db(`/rest/v1/pool?approved=eq.false`, "DELETE");
@@ -617,7 +623,7 @@ export default async function handler(request, response) {
 			}
 
 			const messages = request.body.messages;
-			if (!messages.every(m => validate(messageSchema[m.version], m))){
+			if (!messages.every(m => validate(m, messageSchema[m.version]).length == 0)){
 				response.status(400).send("Invalid messages schema");
 				return;
 			}
