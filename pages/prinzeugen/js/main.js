@@ -435,7 +435,7 @@ async function postManual(){
 	}
 	const posts = blocks.map((block, i) => {
 		const links = block.filter(line => line.includes("\t")).map(line => lineToLink(line));
-		const image = block.filter(line => !line.includes("\t")).filter(line => line.trim());
+		const image = block.filter(line => !line.includes("\t")).map(line => line.trim());
 
 		let target = image.find(line => line.startsWith("glb://")) || image.find(line => line.startsWith("twt://"));
 		if (target) return {

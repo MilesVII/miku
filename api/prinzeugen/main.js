@@ -1,6 +1,6 @@
 import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
-import { validate, ARRAY_OF } from "arstotzka"; 
+import { validate, ARRAY_OF, OPTIONAL } from "arstotzka"; 
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 const NINE_MB = 9 * 1024 * 1024;
@@ -14,6 +14,11 @@ const PUB_FLAGS = {
 	MARKDOWN_LINKS: "markdownlinks"
 };
 const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${url}`;
+
+const TG_BUTTON_SCHEMA = {
+	text: "string",
+	url: "string"
+};
 
 const schema = {
 	debug:{},
@@ -55,7 +60,11 @@ const schema = {
 	moderate: {
 		user: "number",
 		userToken: "string",
-		decisions: "array"
+		decisions: ARRAY_OF({
+			id: "number",
+			approved: "boolean",
+			score: [OPTIONAL, "number"]
+		})
 	},
 	post: {
 		user: "number",
@@ -70,12 +79,19 @@ const schema = {
 	manual: {
 		user: "number",
 		userToken: "string",
-		posts: "array"
+		posts: ARRAY_OF({
+			images: ARRAY_OF("string"),
+			links: ARRAY_OF(TG_BUTTON_SCHEMA)
+		})
 	},
 	publish: {
 		user: "number",
 		userToken: "string",
-		target: "string"
+		target: "string",
+		id: [OPTIONAL, "number"],
+		flags: [OPTIONAL, ARRAY_OF("string")],
+		count: [OPTIONAL, "number"],
+		extras: OPTIONAL
 	}
 };
 
@@ -88,10 +104,7 @@ const messageSchema = [
 	{//1
 		version: "number",
 		image: ARRAY_OF("string"),
-		links: ARRAY_OF({
-			text: "string",
-			url: "string"
-		})
+		links: ARRAY_OF(TG_BUTTON_SCHEMA)
 	},
 	{//2, telegram preuploaded
 		version: "number",
@@ -657,6 +670,11 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("manual"): {
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+
 			const messages = request.body.posts.map(post => post.grab ? null : {
 				version: 1,
 				image: post.images,
