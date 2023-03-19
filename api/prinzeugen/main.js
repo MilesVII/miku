@@ -36,7 +36,9 @@ const schema = {
 	setGrabbers: {
 		user: "number",
 		userToken: "string",
-		grabbers: "array"
+		grabbers: ARRAY_OF(x => validateGrabber(x), {
+			type: "string"
+		})
 	},
 	getGrabbers: {
 		user: "number",
@@ -238,10 +240,12 @@ async function setGrabbers(user, token, grabbers){
 
 function validateGrabber(grabber){
 	const schema = grabbersMeta[grabber?.type]?.schema;
-	return (
-		grabber.type && schema &&
-		validate(grabber, schema).length > 0
-	);
+	if (schema){
+		const errors = validate(grabber, schema);
+		if (errors.length > 0) console.error(errors)
+		return errors.length == 0;
+	} else
+		return false;
 }
 
 function getModerables(user){
@@ -549,12 +553,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("setGrabbers"): {
-			const invalidGrabbers = request.body.grabbers.filter(g => !validateGrabber(g));
-			if (invalidGrabbers.length > 0) {
-				response.status(400).send(invalidGrabbers);
-				return;
-			}
-			
 			const success = await setGrabbers(request.body.user, request.body.userToken, request.body.grabbers);
 			response.status(success ? 200 : 401).send();
 			return;
