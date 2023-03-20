@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "arstotzka": "^0.11.2",
+    "arstotzka": "^0.13.1",
     "sharp": "^0.31.3"
   }
 }

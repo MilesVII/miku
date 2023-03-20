@@ -1,6 +1,6 @@
 import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
-import { validate, ARRAY_OF, OPTIONAL } from "arstotzka"; 
+import { validate, ARRAY_OF, OPTIONAL, DYNAMIC } from "arstotzka"; 
 
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 const NINE_MB = 9 * 1024 * 1024;
@@ -36,9 +36,12 @@ const schema = {
 	setGrabbers: {
 		user: "number",
 		userToken: "string",
-		grabbers: ARRAY_OF(x => validateGrabber(x), {
-			type: "string"
-		})
+		grabbers: ARRAY_OF([
+			DYNAMIC(x => grabbersMeta[x?.type]?.schema || (f => false)),
+			{
+				type: "string"
+			}
+		])
 	},
 	getGrabbers: {
 		user: "number",
@@ -235,16 +238,6 @@ async function setGrabbers(user, token, grabbers){
 	if (response?.length > 0)
 		return true;
 	else
-		return false;
-}
-
-function validateGrabber(grabber){
-	const schema = grabbersMeta[grabber?.type]?.schema;
-	if (schema){
-		const errors = validate(grabber, schema);
-		if (errors.length > 0) console.error(errors)
-		return errors.length == 0;
-	} else
 		return false;
 }
 

@@ -1,5 +1,5 @@
-const sharp = require('sharp');//import * as sharp from "sharp";
-import { safe, phetchV2 } from "./utils";
+import * as sharp from "sharp";
+import { safe, phetchV2 } from "./utils.js";
 
 export default async function handler(request, response) {
 	response.setHeader('Access-Control-Allow-Credentials', true);
