@@ -1,5 +1,6 @@
 import * as https from "https";
 import { pbkdf2Sync } from "node:crypto";
+import sharp from "sharp";
 
 export function hashPassword(raw){
 	const key = pbkdf2Sync(raw, "m1ku39", 7000, 64, "sha512");
@@ -152,4 +153,41 @@ export async function sleep(ms){
 export function escapeMarkdown(raw){
 	const substitutions = {'*': '\\*','#': '\\#','(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;'};
 	return raw.replace(/[\*\(\)\[\]\+\-\\_`#<>]/g, m => substitutions[m]);
+}
+
+export async function processImage(src, options){
+	options = Object.assign({
+		quality: 80,
+		format: "png"
+	}, options);
+
+	let horns = sharp(src);
+
+	if (options.resize)
+		horns = horns.resize(options.resize.w, options.resize.h, {fit: "inside"});
+	
+	let mime;
+	switch (options.format){
+		case ("png"): {
+			horns = horns.png()
+			mime = "image/png";
+			break;
+		}
+		case ("jpeg"): {
+			horns = horns.jpeg({quality: options.quality})
+			mime = "image/jpeg";
+			break;
+		}
+		case ("avif"):
+		default: {
+			horns = horns.avif({quality: options.quality})
+			mime = "image/avif";
+			break;
+		}
+	}
+
+	return {
+		data: await horns.toBuffer(),
+		mime: mime
+	};
 }

@@ -1,5 +1,4 @@
-import * as sharp from "sharp";
-import { safe, phetchV2 } from "./utils.js";
+import { safe, phetchV2, processImage, wegood } from "./utils.js";
 
 export default async function handler(request, response) {
 	response.setHeader('Access-Control-Allow-Credentials', true);
@@ -16,40 +15,36 @@ export default async function handler(request, response) {
 
 	const spi = s => safe(() => parseInt(s, 10));
 	const url = request.body?.url || request.query.url;
-	const w = request.body?.w || spi(request.query.w) || 1024;
-	const h = request.body?.h || spi(request.query.h) || 1024;
+	const w = request.body?.w || spi(request.query.w) || 2048;
+	const h = request.body?.h || spi(request.query.h) || 2048;
 	const q = request.body?.q || spi(request.query.q) || 70;
 	const j = !!(request.query.jpeg || request.query.j);
-	const m = !!(request.query.mirror || request.query.m);
-	const r = w == 0;
+	const r = request.query.w === "0";
 
 	const original = await phetchV2(url)
-	if (original.status > 299) {
-		response.status(503).end(original);
+	if (!wegood(original.status)) {
+		console.log(original.status)
+		response.status(503).end();
 		return;
 	}
 
-	const formatOptions = {
+	const options = {
+		resize: {
+			w: w,
+			h: h
+		},
+		format: j ? "jpeg" : "avif",
 		quality: q
 	};
 
+	if (r) options.resize = null;
+
 	try {
-		if (m) throw 0;
-		let horns = sharp(original.raw);
-		if (!r) horns = horns.resize(w, h, {fit: "inside"});
-		if (j){
-			horns = horns.jpeg(formatOptions)
-			response.setHeader("Content-Type", "image/jpeg");
-		} else {
-			horns = horns.avif(formatOptions);
-			response.setHeader("Content-Type", "image/avif");
-		}
-		
-		const data = await horns.toBuffer()
-		
-		response.status(200).end(data);
+		const processed = await processImage(original.raw, options)
+		response.setHeader("Content-Type", processed.mime);
+		response.status(200).end(processed.data);
 	} catch(e){
-		response.status(200).end(original.raw);
+		response.status(204).end(original.raw);
 	}
 	return;
 }

@@ -1,4 +1,4 @@
-import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown } from "../utils.js";
+import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown, processImage } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
 import { validate, ARRAY_OF, OPTIONAL, DYNAMIC } from "arstotzka"; 
 
@@ -6,14 +6,13 @@ const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 const NINE_MB = 9 * 1024 * 1024;
 const PUB_FLAGS = {
 	ALLOW_IMG_ONLY: "imgonly",
-	URL_AS_TARGET: "urlastarget",
 	USE_PROXY: "useproxy",
 	NO_SIZE_LIMIT: "nosizelimit",
 	KEEP_AFTER_POST: "keep",
 	CUSTOM_BUTTONS: "custombuttons",
 	MARKDOWN_LINKS: "markdownlinks"
 };
-const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=1&url=${url}`;
+const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=2&url=${url}`;
 
 const TG_BUTTON_SCHEMA = {
 	text: "string",
@@ -37,7 +36,7 @@ const schema = {
 		user: "number",
 		userToken: "string",
 		grabbers: ARRAY_OF([
-			DYNAMIC(x => grabbersMeta[x?.type]?.schema || (f => false)),
+			DYNAMIC(x => grabbersMeta[x?.type]?.schema),
 			{
 				type: "string"
 			}
@@ -50,6 +49,16 @@ const schema = {
 	grab: {
 		user: "number",
 		userToken: "string"
+	},
+	cache: {
+		user: "number",
+		rows: ARRAY_OF({
+			id: "number",
+			message: {
+				version: x => x === 3,
+				cached: "boolean"
+			}
+		})
 	},
 	getModerables: {
 		user: "number",
@@ -71,11 +80,6 @@ const schema = {
 			score: [OPTIONAL, "number"]
 		})
 	},
-	post: {
-		user: "number",
-		userToken: "string",
-		messages: "array"
-	},
 	unschedulePost: {
 		user: "number",
 		userToken: "string",
@@ -94,7 +98,7 @@ const schema = {
 		userToken: "string",
 		target: "string",
 		id: [OPTIONAL, "number"],
-		flags: [OPTIONAL, ARRAY_OF("string")],
+		flags: [OPTIONAL, ARRAY_OF(["string", x => Object.values(PUB_FLAGS).includes(x)])],
 		count: [OPTIONAL, "number"],
 		extras: OPTIONAL
 	}
@@ -102,20 +106,35 @@ const schema = {
 
 const messageSchema = [
 	{//0, deprecated version, publisher depends on it's 'raw' property to convert to newer version
-		version: "number",
+		version: ["number", x => x == 0],
 		attachments: "array",
 		caption: "string"
 	},
 	{//1
-		version: "number",
+		version: ["number", x => x == 1],
 		image: ARRAY_OF("string"),
 		links: ARRAY_OF(TG_BUTTON_SCHEMA)
 	},
 	{//2, telegram preuploaded
-		version: "number",
+		version: ["number", x => x == 2],
 		id: "string",
 		type: "string",
 		links: "array"
+	},
+	{//3, no raw
+		version: ["number", x => x == 3],
+		raw: [OPTIONAL, x => false],
+		tags: [OPTIONAL, ARRAY_OF("string")],
+		artists: [OPTIONAL, ARRAY_OF("string")],
+		nsfw: [OPTIONAL, "boolean"],
+		cached: [OPTIONAL, "boolean"],
+		cachedContent: [OPTIONAL, {
+			content: "string",
+			preview: "string",
+		}],
+		content: "string",
+		preview: "string",
+		links: ARRAY_OF(TG_BUTTON_SCHEMA)
 	}
 ];
 
@@ -141,6 +160,24 @@ function db2(url, method, headers, body){
 			"Content-Type": "application/json"
 		}, headers || {})
 	}, body ? JSON.stringify(body) : null);
+}
+
+function storage(url, method, headers, body){
+	return phetchV2(`${process.env.PE_DB_URL}${url}`, {
+		method: method || "GET",
+		headers: Object.assign({
+			"apikey": process.env.PE_SUPABASE_KEY,
+			"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`
+		}, headers || {})
+	}, body || null);
+}
+
+function uploadToStorage(bucket, path, data){
+	return storage(`/storage/v1/object/${bucket}/${path}`, "POST", null, data);
+}
+
+function getStorageLink(bucket, path){
+	return `${process.env.PE_DB_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
 function renderContentRange(from, to){
@@ -170,9 +207,9 @@ async function grab(user, token){
 
 	const now = Date.now();
 
-	let grabbers = await getGrabbers(user, token);
-	if (grabbers.length == 0) return 0;
-	if (grabbers.length == null) return null;
+	const grabbers = await getGrabbers(user, token);
+	if (grabbers.length == 0) return [];
+	if (grabbers == null) return null;
 
 	let moderated = [];
 	let approved = [];
@@ -205,11 +242,11 @@ async function grab(user, token){
 
 	const newEntries = entries0.concat(entries1);
 
-	await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, newEntries);
+	const response = await db("/rest/v1/pool", "POST", {"Prefer": "return=representation"}, newEntries);
 	if (grabbers.length > 0)
 		await setGrabbers(user, token, grabbers);
 
-	return newEntries.length;
+	return response;
 }
 
 async function getGrabbers(user, token){
@@ -289,55 +326,6 @@ function linksToMarkup(links){
 	return {
 		inline_keyboard: chunk(links, 2)
 	};
-}
-
-async function publish2URL(message, target, flags, extras = {}){
-	if (validate(message, messageSchema[1]).length > 0){
-		return "Invalid or unsupported message schema";
-	}
-	const imgOnly = flags.includes(PUB_FLAGS.ALLOW_IMG_ONLY);
-	const useProxy = flags.includes(PUB_FLAGS.USE_PROXY);
-	const anySize = flags.includes(PUB_FLAGS.NO_SIZE_LIMIT);
-
-	if (message.image.length == 0) return "No attachments";
-	const rawVariants = message.image;
-	const prxVariants = message.image.map(l => imageProxy(l));
-	const variants = (useProxy ? [] : rawVariants).concat(prxVariants);
-	
-	let content = null;
-	for (let v of variants){
-		const meta = await pingContentUrl(v);
-		if (
-			meta &&
-			!(imgOnly && (meta.type != "img")) &&
-			(anySize || meta.length < NINE_MB)
-		){
-			content = v;
-			break;
-		}
-	}
-	if (content){
-		const extraLink = {
-			text: "More",
-			url: extras.link
-		};
-		if (extras.link){
-			message.links.push(extraLink);
-		}
-
-		const payload = {
-			url: content,
-			caption: linksToMarkdown(message.links)
-		};
-		const response = await phetchV2(target, {
-			method: "POST"
-		}, payload);
-		if (wegood(response.status))
-			return null;
-		else
-			return response;
-	} else
-		return "No usable content found"
 }
 
 //return null on success or any object on error
@@ -471,6 +459,20 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		if (safeParse(report)?.ok) return null;
 		return report;
 	}
+	if (message.version == 3){
+		const meta = await pingContentUrl(message.content);
+		if (!meta) return "No head?";
+		
+		const report = {
+			direct: await metaSand(meta.type, message.content, message.links)
+		};
+		if (safeParse(report.direct)?.ok) return null;
+		
+		if (message.cached){
+			report.fromCache = await metaSand(meta.type, message.cachedContent.content, message.links);
+		}
+		return report;
+	}
 	
 	return "WTF is that message version, how did you pass validation";
 }
@@ -537,12 +539,72 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			const count = await grab(request.body.user, request.body.userToken);
-			if (count == null){
+			const newRows = await grab(request.body.user, request.body.userToken);
+			if (newRows == null){
 				response.status(401).send("Wrong user id or access token");
 				return;
 			}
-			response.status(200).send(count);
+			response.status(200).send(newRows);
+			return;
+		}
+		case ("cache"): {
+			async function getCacheLinks(id, content){
+				const meta = await pingContentUrl(content);
+				if (meta?.type != "img") return [null, null];
+				
+				const raw = await phetchV2(content);
+				if (!wegood(raw.status)) return [null, null];
+				
+				const [original, preview] = await Promise.all([
+					processImage(raw.raw, {format: "avif", resize: {w: 2048, h: 2048}}),
+					processImage(raw.raw, {format: "avif", resize: {w: 1024, h: 1024}})
+				]);
+				if (!original || !preview) return [null, null];
+				
+				const [r0, r1] = await Promise.all([
+					uploadToStorage("images", `${id}.avif`, original.data),
+					uploadToStorage("images", `${id}_p.avif`, preview.data)
+				]);
+
+				if (wegood(r0.status) && wegood(r1.status)){
+					return [
+						getStorageLink("images", `${id}.avif`),
+						getStorageLink("images", `${id}_p.avif`)
+					]
+				} else return [null, null];
+			}
+			async function cache(row){
+				const [original, preview] = await getCacheLinks(row.id, row.message.content);
+				if (original && preview){
+					row.message.cachedContent = {
+						content: original,
+						preview: preview
+					}
+					row.message.cached = true;
+				}
+			}
+
+			const rows = request.body.rows;
+			const mmmmmm = rows
+				.filter(row => !row.message.cached)
+				.map(row => cache(row));
+			await Promise.all(mmmmmm);
+
+			const cachedRows = rows
+				.filter(row => row.message.cached)
+				.map(row => ({
+					id: row.id,
+					message: row.message
+				}));
+			const dbResponse = await db2(
+				`/rest/v1/pool?user=eq.${request.body.user}`,
+				"POST",
+				{"Prefer": "resolution=merge-duplicates"},
+				cachedRows
+			);
+			console.log(dbResponse);
+
+			response.status(wegood(dbResponse.status) ? 200 : 503).send();
 			return;
 		}
 		case ("setGrabbers"): {

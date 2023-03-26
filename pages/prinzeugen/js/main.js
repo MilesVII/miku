@@ -41,6 +41,10 @@ async function main(){
 
 		pullCurtain(false);
 	}
+	
+	document.querySelector("#login_token").addEventListener("keydown", e => {
+		if (e.code == "Enter") login();
+	});
 
 	listenToKeyboard(false, [
 		{
@@ -50,10 +54,6 @@ async function main(){
 		{
 			keys: ["Period"],
 			action: () => decide(false)
-		},
-		{
-			keys: ["Slash", "ShiftRight", "ControlRight"],
-			action: () => previewFocused()
 		},
 		{
 			keys: ["Backquote"],
@@ -196,10 +196,16 @@ async function login(){
 async function manualGrab(){
 	pullCurtain(true);
 	const response = await callAPI("grab", {}, true);
-	report(`${response.data} new entries`);
+	if (response.status == 200) report(`${response.data.length} new entries`);
 
 	const grabbers = await callAPI("getGrabbers", {}, true);
 	if (grabbers.status == 200) loadGrabbers(grabbers.data);
+
+	if (Array.isArray(response.data) && response.data.length > 0){
+		await callAPI("cache", {
+			rows: response.data
+		}, true)
+	}
 
 	await reloadModerables(false);
 
@@ -282,16 +288,19 @@ function loadModerables(messages){
 
 function renderModerable(message, id){
 	//Message version 1 expected
-	if (message.version != 1){
+	if (message.version != 3){
 		console.error("Unsupported message version");
 		return;
 	}
 	const proto = fromTemplate("moderation_item");
 	proto.dataset.id = id;
-	proto.dataset.original = message.image[0];
+	proto.dataset.original = message.content;
 
-	proto.querySelector("a").href = message.image[0];
-	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
+	const preview = message.cached ? message.cachedContent.preview : message.preview;
+	const source = message.links[0].url;
+
+	proto.querySelector("a").href = source;
+	proto.querySelector("img").src = preview;
 
 	const tagList = proto.querySelector(".row");
 	function renderTag(text, color){
@@ -300,16 +309,16 @@ function renderModerable(message, id){
 		e.style.backgroundColor = color;
 		return e;
 	}
-	if (message?.raw?.nsfw)
+	if (message.nsfw)
 		tagList.appendChild(renderTag("NSFW", "rgba(200, 0, 0, .3"));
-	if (message?.raw?.tags?.includes("animated"))
+	if (message.tags?.includes("animated"))
 		tagList.appendChild(renderTag("animated", "rgba(50, 50, 200, .3"));
-	if (message?.raw?.tags?.includes("animated_gif"))
+	if (message.tags?.includes("animated_gif"))
 		tagList.appendChild(renderTag("GIF", "rgba(50, 50, 200, .3"));
-	if (message?.raw?.tags?.includes("video"))
+	if (message.tags?.includes("video"))
 		tagList.appendChild(renderTag("video", "rgba(50, 50, 200, .3"));
-	if (message?.raw?.artists)
-		message.raw.artists.forEach(artist => tagList.appendChild(renderTag(`🎨 ${artist}`, "rgba(250, 250, 250, .7")));
+	if (message.artists)
+		message.artists.forEach(artist => tagList.appendChild(renderTag(`🎨 ${artist}`, "rgba(250, 250, 250, .7")));
 
 	const buttons = proto.querySelectorAll(".button");
 	buttons[0].textContent = "Approve";
@@ -374,13 +383,6 @@ function decide(approve){
 		nextSib.focus();
 	else
 		document.querySelector("#moderateButton").scrollIntoView({behavior: "smooth", block: "center"});
-}
-
-function previewFocused(){
-	const focused = document.activeElement;
-	if (!focused.classList.contains("previewSection")) return;
-	//focused.querySelector("a").click();
-	focused.querySelector("img").src = `/api/imgproxy?url=${focused.dataset.original}`;
 }
 
 async function moderate(){
@@ -464,11 +466,16 @@ async function postManual(){
 function setPreviewPost(row){
 	const main = document.querySelector("#poolPostMain");
 	const preview = main.querySelector("img");
-	preview.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
+	if (row.message.version == 3){
+		preview.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
+	} else {
+		preview.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
+	}
+	
 
 	const links = main.querySelector("#poolPostLinks");
 	links.innerHTML = "";
-	for (let link of row?.message?.links || []){
+	for (let link of row.message?.links || []){
 		const proto = fromTemplate("poolPostLink");
 		proto.href = link.url;
 		proto.textContent = link.text;
@@ -526,6 +533,8 @@ async function loadMessagePool(page = 0){
 		const img = proto.querySelector("img");
 		if (row.message.version == 1){
 			img.src = row.message.raw?.preview || row.message.image[0];
+		} else if (row.message.version == 3) {
+			img.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
 		} else {
 			img.src = PLACEHOLDER_URL;
 		}

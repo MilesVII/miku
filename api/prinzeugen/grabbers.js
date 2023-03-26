@@ -1,5 +1,9 @@
 import { last, phetch, safeParse, unique, range, sleep } from "../utils.js";
 
+function button(text, url){
+	return {text: text, url: url};
+}
+
 function buildURLParams(params){
 	return Object.keys(params)
 		.map(k => `${k}=${encodeURIComponent(params[k])}`)
@@ -134,6 +138,20 @@ async function twtGetTweets(token, userId, offset, pagination){
 		const artistName = `@${usernameByMedia(raw.media_key)}`;
 		
 		return {
+			version: 3,
+			content: raw.url,
+			preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
+			links: [
+				button("Twitter", tweetLinkByMedia(raw.media_key)),
+				button(`🎨 ${artistName}`, userLinkByMedia(raw.media_key))
+			].filter(l => l.url),
+			cached: false
+		}
+	}).concat(additionalBatch);
+	/* return imagesRaw.map(raw => {
+		const artistName = `@${usernameByMedia(raw.media_key)}`;
+		
+		return {
 			version: 1,
 			raw: {
 				lastId: lastId,
@@ -150,7 +168,7 @@ async function twtGetTweets(token, userId, offset, pagination){
 				{text: `🎨 ${artistName}`, url: userLinkByMedia(raw.media_key)}
 			].filter(l => l.url)
 		}
-	}).concat(additionalBatch);
+	}).concat(additionalBatch); */
 }
 
 async function twtGetMessage(token, tweetId){
@@ -237,8 +255,9 @@ export const grabbersMeta = {
 			const tags = grabber.config.tags.join(" ~ ");
 			const black = grabber.config.blacks.join(" ~ ");
 			const white = mandatoryFilter.concat(grabber.config.whites).join(" ");
+			const tq = grabber.config.tags.length > 1 ? `{${tags}}` : tags;
 			const bq = grabber.config.blacks.length > 0 ? `-{${black}} ` : "";
-			const query = `{${tags}} ${bq}${white}`;
+			const query = `${tq} ${bq}${white}`;
 
 			const params = buildURLParams({
 				page: "dapi",
@@ -280,17 +299,17 @@ export const grabbersMeta = {
 			if (posts.length > 0) grabber.state.lastSeen = last(posts).id;
 
 			const messages = posts.map(p => ({
-				version: 1,
-				raw: p,
-				image: p.links,
+				version: 3,
+				tags: p.tags,
+				artists: p.artists,
+				cached: false,
+				content: p.links[0],
+				preview: p.preview,
 				links: [
-						{text: "Gelbooru", url: p.link},
-						{text: "Source", url: p.source}
+						button("Gelbooru", p.link),
+						button("Source", p.source)
 					].filter(l => l.url).concat(
-						p.artists.map(a => ({
-							text: `🎨 ${a}`,
-							url: `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`
-						}))
+						p.artists.map(a => button(`🎨 ${a}`, `https://gelbooru.com/index.php?page=post&s=list&tags=${a}`))
 					)
 			}));
 
