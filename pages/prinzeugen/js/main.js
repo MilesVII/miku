@@ -203,11 +203,14 @@ async function manualGrab(){
 
 	if (Array.isArray(response.data) && response.data.length > 0){
 		const ids = response.data.map(row => row.id);
-		for (let i = 0; i < 3; ++i){
-			const r = await callAPI("cache", {
-				ids: ids
-			}, true);
-			if (r.status == 200) break;
+		const chunks = chunk(ids, 10);
+		for (let c of chunks){
+			for (let i = 0; i < 3; ++i){
+				const r = await callAPI("cache", {
+					ids: c
+				}, true);
+				if (r.status == 200) break;
+			}
 		}
 	}
 

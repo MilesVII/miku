@@ -490,6 +490,8 @@ export default async function handler(request, response) {
 
 	switch (request.body.action){
 		case ("debug"): {
+			const url = `${process.env.PE_DB_URL}/storage/v1/object/public/images/`;
+			console.log(await phetchV2(url, {method: "URL"}));
 			response.status(200).send();
 			return;
 		}
@@ -566,7 +568,15 @@ export default async function handler(request, response) {
 					uploadToStorage("images", `${id}_p.avif`, preview.data)
 				]);
 
-				if (wegood(r0.status) && wegood(r1.status)){
+				const wefine = 
+					r => wegood(r.status) || 
+					(
+						r.status == 400 && 
+						r.body.statusCode == "409" && 
+						r.body.error == "Duplicate"
+					);
+
+				if (wefine(r0) && wefine(r1)){
 					return [
 						getStorageLink("images", `${id}.avif`),
 						getStorageLink("images", `${id}_p.avif`)
