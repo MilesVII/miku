@@ -52,13 +52,8 @@ const schema = {
 	},
 	cache: {
 		user: "number",
-		rows: ARRAY_OF({
-			id: "number",
-			message: {
-				version: x => x === 3,
-				cached: "boolean"
-			}
-		})
+		userToken: "string",
+		ids: ARRAY_OF("number")
 	},
 	getModerables: {
 		user: "number",
@@ -548,6 +543,11 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("cache"): {
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+
 			async function getCacheLinks(id, content){
 				const meta = await pingContentUrl(content);
 				if (meta?.type != "img") return [null, null];
@@ -573,6 +573,7 @@ export default async function handler(request, response) {
 					]
 				} else return [null, null];
 			}
+
 			async function cache(row){
 				const [original, preview] = await getCacheLinks(row.id, row.message.content);
 				if (original && preview){
@@ -584,10 +585,26 @@ export default async function handler(request, response) {
 				}
 			}
 
-			const rows = request.body.rows;
-			const mmmmmm = rows
-				.filter(row => !row.message.cached)
-				.map(row => cache(row));
+			const idsQuery = request.body.ids.join(",");
+			const query = [
+				`id=in.(${idsQuery})`,
+				`message->cached=eq.false`,
+				`message->version=eq.3`,
+				`user=eq.${request.body.user}`,
+				`select=id,message`
+			].join("&");
+			const src = await db2(`/rest/v1/pool?${query}`, "GET");
+			if (!wegood(src.status)){
+				response.status(503).send();
+				return;
+			}
+			if (src.body?.length == 0){
+				response.status(200).send();
+				return;
+			}
+			const rows = src.body;
+
+			const mmmmmm = rows.map(row => cache(row));
 			await Promise.all(mmmmmm);
 
 			const cachedRows = rows
@@ -596,15 +613,18 @@ export default async function handler(request, response) {
 					id: row.id,
 					message: row.message
 				}));
-			const dbResponse = await db2(
-				`/rest/v1/pool?user=eq.${request.body.user}`,
-				"POST",
-				{"Prefer": "resolution=merge-duplicates"},
-				cachedRows
-			);
-			console.log(dbResponse);
+			if (cachedRows.length > 0){
+				const dbResponse = await db2(
+					`/rest/v1/pool?user=eq.${request.body.user}`,
+					"POST",
+					{"Prefer": "resolution=merge-duplicates"},
+					cachedRows
+				);
 
-			response.status(wegood(dbResponse.status) ? 200 : 503).send();
+				response.status(wegood(dbResponse.status) ? 200 : 503).send();
+			} else {
+				response.status(200).send();
+			}
 			return;
 		}
 		case ("setGrabbers"): {

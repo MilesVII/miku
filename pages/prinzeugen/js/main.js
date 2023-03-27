@@ -202,9 +202,13 @@ async function manualGrab(){
 	if (grabbers.status == 200) loadGrabbers(grabbers.data);
 
 	if (Array.isArray(response.data) && response.data.length > 0){
-		await callAPI("cache", {
-			rows: response.data
-		}, true)
+		const ids = response.data.map(row => row.id);
+		for (let i = 0; i < 3; ++i){
+			const r = await callAPI("cache", {
+				ids: ids
+			}, true);
+			if (r.status == 200) break;
+		}
 	}
 
 	await reloadModerables(false);
