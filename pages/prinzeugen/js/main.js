@@ -200,14 +200,23 @@ async function login(){
 
 async function manualGrab(){
 	pullCurtain(true);
-	const response = await callAPI("grab", {}, true);
-	if (response.status == 200) report(`${response.data.length} new entries`);
+	const grabbersReference = await callAPI("getGrabbers", {}, true);
+	let newRows = [];
+	for (let i = 0; i < grabbersReference.data.length; ++i){
+		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
+		const response = await callAPI("grab", {id: i}, true);
+		if (response.status != 200)
+			report(`Grab #${i} failed`);
+		else
+			newRows = newRows.concat(response.data);
+	}
+	report(`${newRows.length} new entries`);
 
 	const grabbers = await callAPI("getGrabbers", {}, true);
 	if (grabbers.status == 200) loadGrabbers(grabbers.data);
 
-	if (Array.isArray(response.data) && response.data.length > 0){
-		const ids = response.data.map(row => row.id);
+	if (newRows.length > 0){
+		const ids = newRows.map(row => row.id);
 		const chunks = chunk(ids, 10);
 		let counter = 0;
 		for (let c of chunks){

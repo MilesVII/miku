@@ -48,7 +48,8 @@ const schema = {
 	},
 	grab: {
 		user: "number",
-		userToken: "string"
+		userToken: "string",
+		id: [OPTIONAL, "number"]
 	},
 	cache: {
 		user: "number",
@@ -195,7 +196,7 @@ function parseContentRange(range){
 	}
 }
 
-async function grab(user, token){
+async function grab(user, token, id){
 	function flatten(arr){
 		return arr.reduce((p, c) => p.concat(c), []);
 	}
@@ -206,9 +207,17 @@ async function grab(user, token){
 	if (grabbers.length == 0) return [];
 	if (grabbers == null) return null;
 
+	let selection = grabbers;
+	if (id || id === 0){
+		if (id >= 0 && id < grabbers.length)
+			selection = [grabbers[id]];
+		else
+			return null;
+	}
+
 	let moderated = [];
 	let approved = [];
-	for (const grabber of grabbers){
+	for (const grabber of selection){
 		grabber.state.lastGrab = grabber.state.lastGrab || 0;
 		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
 			grabber.state.lastGrab = now;
@@ -536,9 +545,14 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			const newRows = await grab(request.body.user, request.body.userToken);
-			if (newRows == null){
+			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
 				response.status(401).send("Wrong user id or access token");
+				return;
+			}
+
+			const newRows = await grab(request.body.user, request.body.userToken, request.body.id);
+			if (newRows == null){
+				response.status(400).send("Wrong ID specified (out of range)");
 				return;
 			}
 			response.status(200).send(newRows);
