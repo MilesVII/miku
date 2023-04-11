@@ -153,6 +153,11 @@ function pullCurtain(lock, message = "Processing request"){
 	return true;
 }
 
+function updateCurtainMessage(message){
+	const curtain = document.querySelector("#curtain");
+	curtain.textContent = message;
+}
+
 async function authorize(userData){
 	document.querySelector("#login").classList.add("hidden");
 	document.querySelector("#authorized").classList.remove("hidden");
@@ -204,13 +209,16 @@ async function manualGrab(){
 	if (Array.isArray(response.data) && response.data.length > 0){
 		const ids = response.data.map(row => row.id);
 		const chunks = chunk(ids, 10);
+		let counter = 0;
 		for (let c of chunks){
+			updateCurtainMessage(`Caching images: ${counter} / ${chunks.length} done`);
 			for (let i = 0; i < 3; ++i){
 				const r = await callAPI("cache", {
 					ids: c
 				}, true);
 				if (r.status == 200) break;
 			}
+			++counter;
 		}
 	}
 
@@ -337,38 +345,6 @@ function renderModerable(message, id){
 	buttons[1].addEventListener("click", () => {
 		proto.classList.add("rejected");
 		proto.classList.remove("approved");
-	});
-
-	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
-	proto.addEventListener("mousedown", e => e.preventDefault());
-
-	return proto;
-}
-
-function renderAiModerable(message, id){
-	//Message version 1 expected
-	if (message.version != 1){
-		console.error("Unsupported message version");
-		return;
-	}
-	const proto = fromTemplate("moderation_ai");
-	proto.dataset.id = id;
-	proto.dataset.original = message.image[0];
-
-	proto.querySelector("a").href = message.image[0];
-	proto.querySelector("img").src = message.preview || message.raw?.preview || message.image[1] || message.image[0];
-
-	const buttons = proto.querySelectorAll(".button");
-	AI_STYLE_CLASSES.forEach((c, i) => {
-		const score = AI_SCORES[i];
-		buttons[i].textContent = score == undefined ? "S" : score;
-		buttons[i].addEventListener("click", () => {
-			AI_STYLE_CLASSES.forEach(cl => proto.classList.remove(cl));
-			proto.classList.add(c);
-
-			buttons.forEach(b => b.classList.remove("aivote_selected"))
-			buttons[i].classList.add("aivote_selected");
-		});
 	});
 
 	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
