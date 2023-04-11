@@ -203,7 +203,7 @@ async function manualGrab(){
 	const grabbersReference = await callAPI("getGrabbers", {}, true);
 	let newRows = [];
 	for (let i = 0; i < grabbersReference.data.length; ++i){
-		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
+		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.data.length} done`);
 		const response = await callAPI("grab", {id: i}, true);
 		if (response.status != 200)
 			report(`Grab #${i} failed`);
@@ -217,7 +217,7 @@ async function manualGrab(){
 
 	if (newRows.length > 0){
 		const ids = newRows.map(row => row.id);
-		const chunks = chunk(ids, 10);
+		const chunks = chunk(ids, 7);
 		let counter = 0;
 		for (let c of chunks){
 			updateCurtainMessage(`Caching images: ${counter} / ${chunks.length} done`);
