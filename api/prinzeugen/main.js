@@ -269,17 +269,19 @@ async function getGrabbers(user, token){
 async function setGrabbers(user, token, grabbers){
 	for (let grabber of grabbers)
 		if (!grabber.state.lastGrab) grabber.state.lastGrab = 0;
-	const response = await db(
+	const response = await db2(
 		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
 		"PATCH",
 		{"Prefer": "return=representation"},
 		{grabbers: grabbers}
 	);
 
-	if (response?.length > 0)
+	if (wegood(response.status))
 		return true;
-	else
+	else {
+		tgReport(JSON.stringify(response));
 		return false;
+	}
 }
 
 function getModerables(user){
@@ -499,8 +501,8 @@ export default async function handler(request, response) {
 
 	switch (request.body.action){
 		case ("debug"): {
-			const url = `${process.env.PE_DB_URL}/storage/v1/object/public/images/`;
-			console.log(await phetchV2(url, {method: "URL"}));
+			//const ids = await db2(`/rest/v1/pool?user=eq.1&approved=is.null&message->cached=eq.false`, "GET", {"Prefer": "count=exact"});
+			//response.status(200).send(ids.body.map(i => i.id));
 			response.status(200).send();
 			return;
 		}

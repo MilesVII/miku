@@ -217,7 +217,7 @@ async function manualGrab(){
 
 	if (newRows.length > 0){
 		const ids = newRows.map(row => row.id);
-		const chunks = chunk(ids, 7);
+		const chunks = chunk(ids, 3);
 		let counter = 0;
 		for (let c of chunks){
 			updateCurtainMessage(`Caching images: ${counter} / ${chunks.length} done`);
