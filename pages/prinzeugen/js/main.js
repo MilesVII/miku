@@ -205,32 +205,51 @@ async function manualGrab(){
 	for (let i = 0; i < grabbersReference.data.length; ++i){
 		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.data.length} done`);
 		const response = await callAPI("grab", {id: i}, true);
-		if (response.status != 200)
+		if (response.status != 200){
 			report(`Grab #${i} failed`);
-		else
+			console.error(response);
+		} else
 			newRows = newRows.concat(response.data);
 	}
 	report(`${newRows.length} new entries`);
 
+	
 	const grabbers = await callAPI("getGrabbers", {}, true);
 	if (grabbers.status == 200) loadGrabbers(grabbers.data);
 
-	if (newRows.length > 0){
-		const ids = newRows.map(row => row.id);
-		const chunks = chunk(ids, 3);
-		let counter = 0;
-		for (let c of chunks){
-			updateCurtainMessage(`Caching images: ${counter} / ${chunks.length} done`);
-			for (let i = 0; i < 3; ++i){
-				const r = await callAPI("cache", {
-					ids: c
-				}, true);
-				if (r.status == 200) break;
-			}
-			++counter;
-		}
+	await reloadModerables(false);
+
+	pullCurtain(false);
+}
+
+async function manualCache(){
+	pullCurtain(true);
+	
+	const status = await callAPI("linkCache", {}, true);
+	if (status.status != 200){
+		console.error(status);
+		pullCurtain(false);
+		return;
 	}
 
+	let counter = 0;
+	const targets = status.data.leftUncached;
+	for (let target of targets){
+		updateCurtainMessage(`Downloading images: ${counter} / ${targets.length} done`);
+		++counter;
+		
+		const r = await callAPI("downloadCache", {
+			id: target.id
+		}, true);
+		if (r.status != 201)
+			console.warn(r);
+	}
+
+	const newStatus = await callAPI("linkCache", {}, true);
+	report(`Caching complete. ${newStatus.data?.leftUncached?.length} left uncached.`);
+	console.log(newStatus);
+
+	updateCurtainMessage(`Updating moderables`);
 	await reloadModerables(false);
 
 	pullCurtain(false);

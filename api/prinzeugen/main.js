@@ -51,10 +51,14 @@ const schema = {
 		userToken: "string",
 		id: [OPTIONAL, "number"]
 	},
-	cache: {
+	linkCache: {
+		user: "number",
+		userToken: "string"
+	},
+	downloadCache: {
 		user: "number",
 		userToken: "string",
-		ids: ARRAY_OF("number")
+		id: "number"
 	},
 	getModerables: {
 		user: "number",
@@ -124,6 +128,7 @@ const messageSchema = [
 		artists: [OPTIONAL, ARRAY_OF("string")],
 		nsfw: [OPTIONAL, "boolean"],
 		cached: [OPTIONAL, "boolean"],
+		notCacheable: [OPTIONAL, "boolean"],
 		cachedContent: [OPTIONAL, {
 			content: "string",
 			preview: "string",
@@ -174,6 +179,32 @@ function uploadToStorage(bucket, path, data){
 
 function getStorageLink(bucket, path){
 	return `${process.env.PE_DB_URL}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+async function listStorageContents(bucket, path){
+	const PAGE_SIZE = 1000;
+	function fwoosh(page){
+		return storage(`/storage/v1/object/list/${bucket}`, "POST", {
+			"Content-Type": "application/json"
+		}, JSON.stringify({
+			prefix: path,
+			limit: PAGE_SIZE,
+			offset: page * PAGE_SIZE
+		}));
+	}
+
+	const first = await fwoosh(0);
+	if (!wegood(first.status)) return first;
+
+	let lastLength = first.body.length;
+	for (let i = 1; lastLength == PAGE_SIZE; ++i){
+		const aux = await fwoosh(1);
+		if (!wegood(aux.status)) return aux;
+		lastLength = aux.body.length;
+		first.body.push(...aux.body);
+	}
+
+	return first.body;
 }
 
 function renderContentRange(from, to){
@@ -483,6 +514,41 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 	return "WTF is that message version, how did you pass validation";
 }
 
+const CACHING_ERROR_NOT_IMAGE = "not image";
+async function saveCache(id, content){
+	const meta = await pingContentUrl(content);
+	if (meta?.type != "img") return CACHING_ERROR_NOT_IMAGE;
+	
+	const raw = await phetchV2(content);
+	if (!wegood(raw.status)) return "failed to download";
+	
+	const [original, preview] = await Promise.all([
+		processImage(raw.raw, {format: "avif", resize: {w: 2048, h: 2048}}),
+		processImage(raw.raw, {format: "avif", resize: {w: 1024, h: 1024}})
+	]);
+	if (!original || !preview) return [null, null];
+	
+	const [r0, r1] = await Promise.all([
+		uploadToStorage("images", `${id}.avif`, original.data),
+		uploadToStorage("images", `${id}_p.avif`, preview.data)
+	]);
+
+	const wefine = 
+		r => wegood(r.status) || 
+		(
+			r.status == 400 && 
+			r.body.statusCode == "409" && 
+			r.body.error == "Duplicate"
+		);
+
+	if (wefine(r0) && wefine(r1)){
+		return [
+			getStorageLink("images", `${id}.avif`),
+			getStorageLink("images", `${id}_p.avif`)
+		]
+	} else return "failed to upload";
+}
+
 export default async function handler(request, response) {
 	if (request.method != "POST" || !request.body){
 		response.status(400).send("Malformed request. Content-Type header and POST required.");
@@ -499,10 +565,17 @@ export default async function handler(request, response) {
 	}
 	if (request.body.userToken) request.body.userToken = hashPassword(request.body.userToken);
 
+	const PUBLIC_ACTIONS = ["debug", "login"];
+
+	if (!PUBLIC_ACTIONS.includes(request.body.action)){
+		if (!await userAccessAllowed(request.body.user, request.body.userToken)){
+			response.status(401).send("Wrong user id or access token");
+			return;
+		}
+	}
+
 	switch (request.body.action){
 		case ("debug"): {
-			//const ids = await db2(`/rest/v1/pool?user=eq.1&approved=is.null&message->cached=eq.false`, "GET", {"Prefer": "count=exact"});
-			//response.status(200).send(ids.body.map(i => i.id));
 			response.status(200).send();
 			return;
 		}
@@ -524,10 +597,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("saveSettings"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
 			const delta = {
 				additional: request.body.additionalData
 			};
@@ -547,11 +616,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
-
 			const newRows = await grab(request.body.user, request.body.userToken, request.body.id);
 			if (newRows == null){
 				response.status(400).send("Wrong ID specified (out of range)");
@@ -560,97 +624,82 @@ export default async function handler(request, response) {
 			response.status(200).send(newRows);
 			return;
 		}
-		case ("cache"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
+		case ("linkCache"): {
+			const storageList = await listStorageContents("images", "");
+			if (!Array.isArray(storageList)){
+				response.status(502).send(storageList);
 				return;
 			}
 
-			async function getCacheLinks(id, content){
-				const meta = await pingContentUrl(content);
-				if (meta?.type != "img") return [null, null];
-				
-				const raw = await phetchV2(content);
-				if (!wegood(raw.status)) return [null, null];
-				
-				const [original, preview] = await Promise.all([
-					processImage(raw.raw, {format: "avif", resize: {w: 2048, h: 2048}}),
-					processImage(raw.raw, {format: "avif", resize: {w: 1024, h: 1024}})
-				]);
-				if (!original || !preview) return [null, null];
-				
-				const [r0, r1] = await Promise.all([
-					uploadToStorage("images", `${id}.avif`, original.data),
-					uploadToStorage("images", `${id}_p.avif`, preview.data)
-				]);
-
-				const wefine = 
-					r => wegood(r.status) || 
-					(
-						r.status == 400 && 
-						r.body.statusCode == "409" && 
-						r.body.error == "Duplicate"
-					);
-
-				if (wefine(r0) && wefine(r1)){
-					return [
-						getStorageLink("images", `${id}.avif`),
-						getStorageLink("images", `${id}_p.avif`)
-					]
-				} else return [null, null];
+			const allRows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&message->version=eq.3&message->cached=eq.false&select=id,message`, "GET", {"Prefer": "count=exact"});
+			if (!wegood(allRows.status)){
+				response.status(502).send(allRows);
+				return;
 			}
+			const rows = allRows.body.filter(r => !r.message.notCacheable); //TODO: Potential issue if pool has more than 1000 not cacheable posts
 
-			async function cache(row){
-				const [original, preview] = await getCacheLinks(row.id, row.message.content);
-				if (original && preview){
-					row.message.cachedContent = {
-						content: original,
-						preview: preview
-					}
-					row.message.cached = true;
+			const targets = rows.filter(r => storageList.find(s => s.name == `${r.id}.avif`));
+			targets.forEach(r => {
+				r.message.cached = true;
+				r.message.cachedContent = {
+					content: getStorageLink("images", `${r.id}.avif`),
+					preview: getStorageLink("images", `${r.id}_p.avif`)
 				}
-			}
+			});
 
-			const idsQuery = request.body.ids.join(",");
-			const query = [
-				`id=in.(${idsQuery})`,
-				`message->cached=eq.false`,
-				`message->version=eq.3`,
-				`user=eq.${request.body.user}`,
-				`select=id,message`
-			].join("&");
-			const src = await db2(`/rest/v1/pool?${query}`, "GET");
-			if (!wegood(src.status)){
-				response.status(503).send();
+			let update = "No rows updated";
+			if (targets.length > 0)
+				update = await db2(`/rest/v1/pool?user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, targets);
+
+			response.status(200).send({
+				leftUncached: rows.filter(r => !targets.includes(r)),
+				linked: targets,
+				updateStatus: update
+			});
+			return;
+		}
+		case ("downloadCache"): {
+			//Only single post can be cached due to timeout issue
+			//The goal is to save cached version to storage
+			const rows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&id=eq.${request.body.id}`, "GET");
+			if (!wegood(rows.status)){
+				response.status(502).send(rows);
 				return;
 			}
-			if (src.body?.length == 0){
-				response.status(200).send();
+			if (rows.body?.length != 1){
+				response.status(404).send(rows);
 				return;
 			}
-			const rows = src.body;
 
-			const mmmmmm = rows.map(row => cache(row));
-			await Promise.all(mmmmmm);
-
-			const cachedRows = rows
-				.filter(row => row.message.cached)
-				.map(row => ({
-					id: row.id,
-					message: row.message
-				}));
-			if (cachedRows.length > 0){
-				const dbResponse = await db2(
-					`/rest/v1/pool?user=eq.${request.body.user}`,
-					"POST",
-					{"Prefer": "resolution=merge-duplicates"},
-					cachedRows
-				);
-
-				response.status(wegood(dbResponse.status) ? 200 : 503).send();
-			} else {
-				response.status(200).send();
+			const post = rows.body[0];
+			if (post.message.version != 3){
+				response.status(400).send("Invalid message format version");
+				return;
 			}
+			if (post.message.cached){
+				response.status(200).send("Cached already");
+				return;
+			}
+			if (post.message.notCacheable){
+				response.status(202).send("Post not cacheable");
+				return;
+			}
+
+			const links = await saveCache(post.id, post.message.content);
+			if (!Array.isArray(links)){
+				if (links == CACHING_ERROR_NOT_IMAGE){
+					post.message.notCacheable = true;
+					await db(
+						`/rest/v1/pool?id=eq.${post.id}`,
+						"PATCH",
+						{"Prefer": "return=minimal"},
+						{message: post.message}
+					);
+				}
+				response.status(502).send(links);
+				return;
+			}
+			response.status(201).send();
 			return;
 		}
 		case ("setGrabbers"): {
@@ -705,16 +754,11 @@ export default async function handler(request, response) {
 				});
 				return;
 			} else {
-				response.status(503).send();
+				response.status(502).send();
 				return;
 			}
 		}
 		case ("moderate"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
-			
 			const decisionSchema = {
 				id: "number",
 				approved: "boolean"
@@ -729,11 +773,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("post"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
-
 			const messages = request.body.messages;
 			if (!messages.every(m => validate(m, messageSchema[m.version]).length == 0)){
 				response.status(400).send("Invalid messages schema");
@@ -753,11 +792,6 @@ export default async function handler(request, response) {
 			break;
 		}
 		case ("unschedulePost"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
-			
 			const re = await db2(
 				`/rest/v1/pool?user=eq.${request.body.user}&id=eq.${request.body.id}`,
 				"DELETE",
@@ -769,11 +803,6 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("manual"): {
-			if (!await userAccessAllowed(request.body.user, request.body.userToken)){
-				response.status(401).send("Wrong user id or access token");
-				return;
-			}
-
 			const messages = request.body.posts.map(post => post.grab ? null : {
 				version: 1,
 				image: post.images,
