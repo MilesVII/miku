@@ -506,7 +506,7 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		if (safeParse(report.direct)?.ok) return null;
 		
 		if (message.cached){
-			report.fromCache = await metaSand(meta.type, message.cachedContent.content, message.links);
+			report.fromCache = await metaSand(meta.type, imageProxy(message.cachedContent.content), message.links);
 		}
 		return report;
 	}
