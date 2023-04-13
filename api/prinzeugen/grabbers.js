@@ -79,6 +79,7 @@ async function twtGetUserIdByName(token, username){
 }
 
 async function twtGetTweets(token, userId, offset, pagination){
+	const EMPTY_RESULT = {tweets: []};
 	const paginationParameter = pagination ? `pagination_token=${pagination}&` : "";
 	const url = `https://api.twitter.com/2/users/${userId}/tweets?${paginationParameter}${[
 		"exclude=retweets,replies",
@@ -96,11 +97,11 @@ async function twtGetTweets(token, userId, offset, pagination){
 		}
 	}, null));
 
-	if (!response) return null;
+	if (!response) return EMPTY_RESULT;
 
-	if (response.meta.newest_id == response.meta.oldest_id) return [];
+	if (response.meta.newest_id == response.meta.oldest_id) return EMPTY_RESULT;
 
-	const additionalBatch = response.meta.next_token ? (await twtGetTweets(token, userId, offset, response.meta.next_token)) : [];
+	const additionalBatch = response.meta.next_token ? (await twtGetTweets(token, userId, offset, response.meta.next_token)).tweets : [];
 
 	const imagesRaw = (response?.includes?.media || []).filter(m => m.type == "photo");
 	const usersRaw = (response?.includes?.users || []);
@@ -132,44 +133,24 @@ async function twtGetTweets(token, userId, offset, pagination){
 			return null;
 	}
 
-	const lastId = response?.meta?.newest_id;
-
-	return imagesRaw.map(raw => {
-		const artistName = `@${usernameByMedia(raw.media_key)}`;
-		
-		return {
-			version: 3,
-			content: raw.url,
-			preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
-			artists: [artistName],
-			links: [
-				button("Twitter", tweetLinkByMedia(raw.media_key)),
-				button(`🎨 ${artistName}`, userLinkByMedia(raw.media_key))
-			].filter(l => l.url),
-			cached: false
-		}
-	}).concat(additionalBatch);
-	/* return imagesRaw.map(raw => {
-		const artistName = `@${usernameByMedia(raw.media_key)}`;
-		
-		return {
-			version: 1,
-			raw: {
-				lastId: lastId,
-				artists: [artistName]
-			},
-			preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
-			image: [
-				raw.url,
-				`${raw.url}?format=jpg&name=medium`,
-				`${raw.url}?format=jpg&name=small`
-			].filter(l => l),
-			links: [
-				{text: "Twitter", url: tweetLinkByMedia(raw.media_key)},
-				{text: `🎨 ${artistName}`, url: userLinkByMedia(raw.media_key)}
-			].filter(l => l.url)
-		}
-	}).concat(additionalBatch); */
+	return {
+		lastId: response?.meta?.newest_id,
+		tweets: imagesRaw.map(raw => {
+			const artistName = `@${usernameByMedia(raw.media_key)}`;
+			
+			return {
+				version: 3,
+				content: raw.url,
+				preview: raw.preview_image_url || `${raw.url}?format=jpg&name=small`,
+				artists: [artistName],
+				links: [
+					button("Twitter", tweetLinkByMedia(raw.media_key)),
+					button(`🎨 ${artistName}`, userLinkByMedia(raw.media_key))
+				].filter(l => l.url),
+				cached: false
+			}
+		}).concat(additionalBatch)
+	};
 }
 
 async function twtGetMessage(token, tweetId){
@@ -226,11 +207,10 @@ export const grabbersMeta = {
 			if (!grabber.config.userId){
 				grabber.config.userId = await twtGetUserIdByName(grabber.credentials.token, grabber.config.username);
 			}
-
 			const messages = await twtGetTweets(grabber.credentials.token, grabber.config.userId, grabber.state.lastSeen || 0) || [];
-			if (messages[0]?.raw?.lastId) grabber.state.lastSeen = messages[0].raw.lastId;
+			if (messages.lastId) grabber.state.lastSeen = messages.lastId;
 
-			return messages;
+			return messages.tweets;
 		}
 	},
 	"gelbooru": {

@@ -198,7 +198,7 @@ async function listStorageContents(bucket, path){
 
 	let lastLength = first.body.length;
 	for (let i = 1; lastLength == PAGE_SIZE; ++i){
-		const aux = await fwoosh(1);
+		const aux = await fwoosh(i);
 		if (!wegood(aux.status)) return aux;
 		lastLength = aux.body.length;
 		first.body.push(...aux.body);
