@@ -55,6 +55,10 @@ const schema = {
 		user: "number",
 		userToken: "string"
 	},
+	optimizeCache: {
+		user: "number",
+		userToken: "string"
+	},
 	downloadCache: {
 		user: "number",
 		userToken: "string",
@@ -205,6 +209,48 @@ async function listStorageContents(bucket, path){
 	}
 
 	return first.body;
+}
+
+function removeStorageContents(bucket, names){
+	const payload = JSON.stringify({
+		prefixes: names,
+	});
+	return storage(`/storage/v1/object/${bucket}`, "DELETE", {
+		"Content-Type": "application/json",
+		"Content-Length": payload.length //won't work without length specified. will fail if there are unicode characters in names
+	}, payload);
+}
+
+async function getAllRows(table, queryParameters){
+	function result(success, code, data){
+		return {success, code, data};
+	}
+	const url = `/rest/v1/${table}?${queryParameters.join("&")}`;
+
+	const first = await db2(url, "GET", {"Prefer": "count=exact"});
+	if (!wegood(first.status)) 
+		return result(false, 502, first);
+
+	const rows = first.body;
+
+	const rng = parseContentRange(first.headers["content-range"]);
+	const stride = rng.to - rng.from;
+
+	while (rng.count > rng.to){
+		rng.from += stride;
+		rng.to += stride;
+		const amndmnt = await db2(url, "GET", {
+			"Prefer": "count=exact",
+			"Range": rng.renderRange()
+		});
+		if (wegood(amndmnt.status)) {
+			rows.push(...amndmnt.body);
+		} else {
+			return result(false, 502, amndmnt);
+		}
+	}
+
+	return result(true, 200, rows);
 }
 
 function renderContentRange(from, to){
@@ -500,14 +546,18 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 		const meta = await pingContentUrl(message.content);
 		if (!meta) return "No head?";
 		
-		const report = {
-			direct: await metaSand(meta.type, message.content, message.links)
-		};
+		const report = {};
+
+		report.direct = await metaSand(meta.type, message.content, message.links);
 		if (safeParse(report.direct)?.ok) return null;
-		
+
 		if (message.cached){
 			report.fromCache = await metaSand(meta.type, imageProxy(message.cachedContent.content), message.links);
 			if (safeParse(report.fromCache)?.ok) return null;
+		}
+		if (meta.type == "img") {
+			report.proxy = await metaSand(meta.type, imageProxy(message.content), message.links);
+			if (safeParse(report.proxy)?.ok) return null;
 		}
 		return report;
 	}
@@ -701,6 +751,38 @@ export default async function handler(request, response) {
 				return;
 			}
 			response.status(201).send();
+			return;
+		}
+		case ("optimizeCache"): {
+			if (request.body.user != 1) {
+				response.status(401).send("shoo");
+				return;
+			}
+			const [storageList, posts] = await Promise.all([
+				listStorageContents("images", ""),
+				getAllRows("pool", [
+					"message->cached=eq.true"
+				])
+			]);
+			if (!Array.isArray(storageList)){
+				response.status(502).send(storageList);
+				return;
+			}
+			if (!posts.success){
+				response.status(502).send(posts);
+				return;
+			}
+
+			const targets = storageList
+				.filter(item => !posts.data.some(post => post.id == parseInt(item.name)))
+				.filter(item => !item.name.startsWith("."));
+
+			if (targets.length > 0){
+				const deletionResponse = await removeStorageContents("images", targets.map(t => t.name));
+				response.status(deletionResponse.status).send(deletionResponse);
+			} else {
+				response.status(204).send();
+			}
 			return;
 		}
 		case ("setGrabbers"): {
