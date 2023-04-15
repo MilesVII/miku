@@ -222,14 +222,14 @@ function removeStorageContents(bucket, names){
 }
 
 async function getAllRows(table, queryParameters){
-	function result(success, code, data){
-		return {success, code, data};
+	function result(success, data){
+		return {success, data};
 	}
 	const url = `/rest/v1/${table}?${queryParameters.join("&")}`;
 
 	const first = await db2(url, "GET", {"Prefer": "count=exact"});
 	if (!wegood(first.status)) 
-		return result(false, 502, first);
+		return result(false, first);
 
 	const rows = first.body;
 
@@ -246,7 +246,7 @@ async function getAllRows(table, queryParameters){
 		if (wegood(amndmnt.status)) {
 			rows.push(...amndmnt.body);
 		} else {
-			return result(false, 502, amndmnt);
+			return result(false, amndmnt);
 		}
 	}
 
@@ -769,7 +769,7 @@ export default async function handler(request, response) {
 				return;
 			}
 			if (!posts.success){
-				response.status(502).send(posts);
+				response.status(502).send(posts.data);
 				return;
 			}
 
@@ -796,31 +796,12 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("getPool"): {
-			const first = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {"Prefer": "count=exact"});
-			if (!wegood(first.status)) {
-				response.status(502).send(first);
-				return;
-			}
-			let rows = first.body;
-			
-			const rng = parseContentRange(first.headers["content-range"]);
-			const stride = rng.to - rng.from;
+			const rows = getAllRows("pool", [
+				`user=eq.${request.body.user}`,
+				"approved=eq.true"
+			]);
 
-			while (rng.count > rng.to){
-				rng.from += stride;
-				rng.to += stride;
-				const amndmnt = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {
-					"Prefer": "count=exact",
-					"Range": rng.renderRange()
-				});
-				if (wegood(amndmnt.status)) {
-					rows = rows.concat(amndmnt.body);
-				} else {
-					console.error(amndmnt.body)
-					break;
-				}
-			}
-			response.status(200).send(rows);
+			response.status(rows.success ? 200 : 502).send(rows.data);
 			return;
 		}
 		case ("getPoolPage"): {
