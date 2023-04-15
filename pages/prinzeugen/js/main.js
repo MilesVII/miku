@@ -56,32 +56,12 @@ async function main(){
 			action: () => decide(false)
 		},
 		{
-			keys: ["Backquote"],
-			action: () => decide(5)
-		},
-		{
-			keys: ["Digit1"],
-			action: () => decide(4)
-		},
-		{
-			keys: ["Digit2"],
-			action: () => decide(3)
-		},
-		{
-			keys: ["Digit3"],
-			action: () => decide(2)
-		},
-		{
-			keys: ["Digit4"],
-			action: () => decide(1)
-		},
-		{
-			keys: ["Digit5"],
-			action: () => decide(0)
+			keys: ["Backspace"],
+			action: () => upscalePreview(false)
 		},
 		{
 			keys: ["Digit0"],
-			action: () => document.querySelectorAll(".previewSection").forEach(e => e.querySelector("img").src = `/api/imgproxy?url=${e.dataset.original}`)
+			action: () => upscalePreview(true)
 		}
 	]);
 }
@@ -330,7 +310,6 @@ function loadModerables(messages){
 }
 
 function renderModerable(message, id){
-	//Message version 1 expected
 	if (message.version != 3){
 		console.error("Unsupported message version");
 		return;
@@ -338,6 +317,7 @@ function renderModerable(message, id){
 	const proto = fromTemplate("moderation_item");
 	proto.dataset.id = id;
 	proto.dataset.original = message.content;
+	if (message.cached) proto.dataset.upscaled = "weewee";
 
 	const preview = message.cached ? message.cachedContent.preview : message.preview;
 	const source = message.links[0].url;
@@ -379,6 +359,29 @@ function renderModerable(message, id){
 	proto.addEventListener("mousedown", e => e.preventDefault());
 
 	return proto;
+}
+
+function upscalePreview(doAll){
+	async function upscale(e){
+		if (e.dataset.upscaled) return;
+		e.dataset.upscaled = "weewee";
+
+		const url = `/api/imgproxy?j=1&w=0&url=${e.dataset.original}`;
+		const response = await fetch(url);
+		if (!response.ok) return;
+		if (!response.headers.get("content-type").startsWith("image/")) return;
+		const data = await response.arrayBuffer();
+		const blob = new Blob([data]);
+		e.querySelector("img").src = URL.createObjectURL(blob);
+	}
+
+	if (doAll){
+		document.querySelectorAll(".previewSection").forEach(e => upscale(e));
+	} else {
+		const focused = document.activeElement;
+		if (!focused.classList.contains("previewSection")) return;
+		upscale(focused);
+	}
 }
 
 function decide(approve){
