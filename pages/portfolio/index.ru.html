@@ -7,129 +7,7 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> 
-
-		<style type="text/css">
-			:root {
-				--spacing: .5vw;
-				--rounding: .4vw;
-			}
-
-			* {
-				box-sizing: border-box;
-				font-family: 'Roboto', sans-serif;
-			}
-
-			html, body, p {
-				margin:  0;
-				border:  0;
-				padding: 0;
-			}
-
-			body {
-				width: 100%;
-				margin-bottom: 1vw;
-			}
-
-			summary {
-				/* list-style-type: none; */
-				cursor: pointer;
-			}
-
-			details > div {
-				background-color: lightgray;
-				border-radius: var(--rounding);
-				padding: .5vw;
-				margin-top: var(--spacing);
-			}
-
-			a {
-				background-color: hsl(0, 0%, 85%);
-				border-radius: var(--rounding);
-				transition-duration: .2s;
-				transition-property: background-color;
-			}
-
-			a:hover {
-				background-color: hsl(0, 0%, 70%);
-			}
-
-			a:link {
-				color: hsl(12, 100%, 50%);
-			}
-
-			a:visited {
-				color: hsl(0, 100%, 30%);
-			}
-
-			.button {
-				border-radius: 4px;
-				cursor: pointer;
-				padding: 2vw;
-			}
-
-			.segment {
-				padding-top: 2vw;
-				margin: 0 24vw 0 24vw;
-				font-size: 1.7em;
-			}
-
-			.title {
-				display: flex;
-				justify-content: end;
-				font-size: 2.7em;
-			}
-
-			.langSelector {
-				margin-left: auto;
-				display: flex;
-				align-items: center;
-				gap: var(--spacing);
-			}
-
-			.langSelector > a {
-				padding: .42vw;
-				display: flex;
-			}
-
-			@media only screen and (orientation: portrait) {
-				.segment {
-					margin: 0 7vw 0 7vw;
-				}
-			}
-
-			.hidden {
-				display: none;
-			}
-
-			.chipRow {
-				display: inline-flex;
-				flex-wrap: wrap;
-				gap: var(--spacing);
-			}
-
-			.chip {
-				display: inline-flex;
-				padding: 0 var(--spacing) 0 var(--spacing);
-				border-radius: var(--rounding);
-
-				background-color: lightgray;
-				color: black;
-			}
-
-			.chip-ts { background-color: #3077c5; color: white; }
-			.chip-js { background-color: #ead41c; color: black; }
-			.chip-eb { background-color: #ead41c; color: black; }
-			.chip-px { background-color: #e72264; color: white; }
-			.chip-wp { background-color: #1c78c0; color: white; }
-			.chip-rt { background-color: #149eca; color: white; }
-			.chip-el { background-color: #149eca; color: white; }
-			.chip-vc { background-color: black; color: white; }
-			.chip-nd { background-color: #69a064; color: white; }
-			.chip-3j { background-color: lightgray; color: black; }
-			.chip-sb { background-color: #1c1c1c; color: #3bc489; }
-			.chip-ws { background-color: lightgray; color: #f26100; }
-		</style>
-
+		<link rel="stylesheet" href="styles.css" />
 	</head>
 	<body>
 		<div class="segment title">
@@ -139,7 +17,7 @@
 				<a href="index.ru.html"><img src="ru.svg" alt="ru" style="height: 1em;"></a>
 			</span>
 		</div>
-		<div class="segment"><p>Занимаюсь программированием как хобби с раннего детства, а с 2019 еще и веб-разработкой. Помимо небольших традиционных веб-приложений и страниц также имею опыт разработки интерактивной рекламы, портативных приложений и написания скриптов. Далее следуют примеры работ за последние несколько лет с кратким оисанием:</p></div>
+		<div class="segment"><p>Занимаюсь программированием как хобби с раннего детства, а с 2019 еще и веб-разработкой. Помимо небольших традиционных веб-приложений и страниц также имею опыт разработки интерактивной рекламы, портативных приложений и написания скриптов. Далее следуют примеры работ за последние несколько лет с кратким описанием:</p></div>
 
 		
 		<details class="segment">
@@ -246,6 +124,7 @@
 			</summary>
 			<div>
 				<p>Приложение на Electron, альтернативный фронтенд для сервиса AppStore Connect. Использовался для управления покупками, не поддерживается из-за отсутствия доступа к аккаунту разработчика, не функционирует.</p>
+<p><a href="https://github.com/MilesVII/strelitzia">GitHub</a></p>
 			</div>
 		</details>
 

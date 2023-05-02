@@ -7,129 +7,7 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> 
-
-		<style type="text/css">
-			:root {
-				--spacing: .5vw;
-				--rounding: .4vw;
-			}
-
-			* {
-				box-sizing: border-box;
-				font-family: 'Roboto', sans-serif;
-			}
-
-			html, body, p {
-				margin:  0;
-				border:  0;
-				padding: 0;
-			}
-
-			body {
-				width: 100%;
-				margin-bottom: 1vw;
-			}
-
-			summary {
-				/* list-style-type: none; */
-				cursor: pointer;
-			}
-
-			details > div {
-				background-color: lightgray;
-				border-radius: var(--rounding);
-				padding: .5vw;
-				margin-top: var(--spacing);
-			}
-
-			a {
-				background-color: hsl(0, 0%, 85%);
-				border-radius: var(--rounding);
-				transition-duration: .2s;
-				transition-property: background-color;
-			}
-
-			a:hover {
-				background-color: hsl(0, 0%, 70%);
-			}
-
-			a:link {
-				color: hsl(12, 100%, 50%);
-			}
-
-			a:visited {
-				color: hsl(0, 100%, 30%);
-			}
-
-			.button {
-				border-radius: 4px;
-				cursor: pointer;
-				padding: 2vw;
-			}
-
-			.segment {
-				padding-top: 2vw;
-				margin: 0 24vw 0 24vw;
-				font-size: 1.7em;
-			}
-
-			.title {
-				display: flex;
-				justify-content: end;
-				font-size: 2.7em;
-			}
-
-			.langSelector {
-				margin-left: auto;
-				display: flex;
-				align-items: center;
-				gap: var(--spacing);
-			}
-
-			.langSelector > a {
-				padding: .42vw;
-				display: flex;
-			}
-
-			@media only screen and (orientation: portrait) {
-				.segment {
-					margin: 0 7vw 0 7vw;
-				}
-			}
-
-			.hidden {
-				display: none;
-			}
-
-			.chipRow {
-				display: inline-flex;
-				flex-wrap: wrap;
-				gap: var(--spacing);
-			}
-
-			.chip {
-				display: inline-flex;
-				padding: 0 var(--spacing) 0 var(--spacing);
-				border-radius: var(--rounding);
-
-				background-color: lightgray;
-				color: black;
-			}
-
-			.chip-ts { background-color: #3077c5; color: white; }
-			.chip-js { background-color: #ead41c; color: black; }
-			.chip-eb { background-color: #ead41c; color: black; }
-			.chip-px { background-color: #e72264; color: white; }
-			.chip-wp { background-color: #1c78c0; color: white; }
-			.chip-rt { background-color: #149eca; color: white; }
-			.chip-el { background-color: #149eca; color: white; }
-			.chip-vc { background-color: black; color: white; }
-			.chip-nd { background-color: #69a064; color: white; }
-			.chip-3j { background-color: lightgray; color: black; }
-			.chip-sb { background-color: #1c1c1c; color: #3bc489; }
-			.chip-ws { background-color: lightgray; color: #f26100; }
-		</style>
-
+		<link rel="stylesheet" href="styles.css" />
 	</head>
 	<body>
 		<div class="segment title">
@@ -169,7 +47,7 @@ Latest React version features Supabase DB, full-fledged backend with custom auth
 				</div>
 			</summary>
 			<div>
-				<p>Arstotzka is NPM package for JS data validation, made primarily for validating API responses. Unlike alternatives, it features laconic schema.</p>
+				<p>Arstotzka is NPM package for JS data validation, made primarily for validating API responses. Unlike alternatives, it offers laconic schema.</p>
 <p><a href="https://www.npmjs.com/package/arstotzka">NPM</a> <a href="https://github.com/MilesVII/arstotzka#readme">GitHub</a></p>
 			</div>
 		</details>
@@ -184,7 +62,7 @@ Latest React version features Supabase DB, full-fledged backend with custom auth
 				</div>
 			</summary>
 			<div>
-				<p>I had a dream of red 3D car in a browser and thought that it would be fun to implement it in real life, while learning.</p>
+				<p>I had a dream about red 3D car in a browser and thought that it would be fun to implement it in real life and learn to use Typescript and Three.js.</p>
 <p><a href="https://github.com/MilesVII/liminalcar">GitHub</a> <a href="https://mikumiku.vercel.app/pages/liminal/">Demo</a></p>
 			</div>
 		</details>
@@ -245,14 +123,10 @@ Latest React version features Supabase DB, full-fledged backend with custom auth
 				</div>
 			</summary>
 			<div>
-				<p><strong>Strelitiza</strong> is standalone Electron app that provides convenient user interface for Apple's AppStore services, using their undocumented backend. Abandoned due to lack of access to developer account, currently unusable due to API changes.</p>
-<p><strong>Third-party components:</strong></p>
-<ul>
-<li><a href="https://www.electronjs.org/">Electron</a> and <a href="https://www.electronforge.io/">Electron Forge</a></li>
-<li><a href="https://handsontable.com">Handsontable</a>, JS library providing spreadsheet-like tables for UI. Kinda buggy, tbh</li>
-<li>Inspired by Fastlane's <a href="https://github.com/fastlane/fastlane/tree/master/spaceship">Spaceship</a></li>
-<li>Background art by <a href="https://www.deviantart.com/otj194">otj194</a> on fair-use terms</li>
-</ul>
+				<p><strong>Strelitiza</strong> is standalone Electron app that provides convenient user interface for Apple's AppStore services, using their undocumented backend. 
+Abandoned due to lack of access to developer account, currently unusable due to API changes.
+Uses <a href="https://www.electronjs.org/">Electron</a> and <a href="https://www.electronforge.io/">Electron Forge</a>, <a href="https://handsontable.com">Handsontable</a>, inspired by Fastlane's <a href="https://github.com/fastlane/fastlane/tree/master/spaceship">Spaceship</a></p>
+<p><a href="https://github.com/MilesVII/strelitzia">GitHub</a></p>
 			</div>
 		</details>
 
