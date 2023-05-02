@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>MilesSeventh's portfolio</title>
+		<link rel="icon" type="image/png" href="favicon.png"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet"> 
+
+		<style type="text/css">
+			:root {
+				--spacing: .5vw;
+				--rounding: .4vw;
+			}
+
+			* {
+				box-sizing: border-box;
+				font-family: 'Roboto', sans-serif;
+			}
+
+			html, body, p {
+				margin:  0;
+				border:  0;
+				padding: 0;
+			}
+
+			body {
+				width: 100%;
+				margin-bottom: 1vw;
+			}
+
+			summary {
+				/* list-style-type: none; */
+				cursor: pointer;
+			}
+
+			details > div {
+				background-color: lightgray;
+				border-radius: var(--rounding);
+				padding: .5vw;
+				margin-top: var(--spacing);
+			}
+
+			a {
+				background-color: hsl(0, 0%, 85%);
+				border-radius: var(--rounding);
+				transition-duration: .2s;
+				transition-property: background-color;
+			}
+
+			a:hover {
+				background-color: hsl(0, 0%, 70%);
+			}
+
+			a:link {
+				color: hsl(12, 100%, 50%);
+			}
+
+			a:visited {
+				color: hsl(0, 100%, 30%);
+			}
+
+			.button {
+				border-radius: 4px;
+				cursor: pointer;
+				padding: 2vw;
+			}
+
+			.segment {
+				padding-top: 2vw;
+				margin: 0 24vw 0 24vw;
+				font-size: 1.7em;
+			}
+
+			.title {
+				display: flex;
+				justify-content: end;
+				font-size: 2.7em;
+			}
+
+			.langSelector {
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+				gap: var(--spacing);
+			}
+
+			.langSelector > a {
+				padding: .42vw;
+				display: flex;
+			}
+
+			@media only screen and (orientation: portrait) {
+				.segment {
+					margin: 0 7vw 0 7vw;
+				}
+			}
+
+			.hidden {
+				display: none;
+			}
+
+			.chipRow {
+				display: inline-flex;
+				flex-wrap: wrap;
+				gap: var(--spacing);
+			}
+
+			.chip {
+				display: inline-flex;
+				padding: 0 var(--spacing) 0 var(--spacing);
+				font-size: .7em;
+				font-weight: bold;
+				border-radius: var(--rounding);
+
+				background-color: lightgray;
+				color: black;
+			}
+
+			.chip-ts { background-color: #3077c5; color: white; }
+			.chip-js { background-color: #ead41c; color: black; }
+			.chip-eb { background-color: #ead41c; color: black; }
+			.chip-px { background-color: #e72264; color: white; }
+			.chip-wp { background-color: #1c78c0; color: white; }
+			.chip-rt { background-color: #149eca; color: white; }
+			.chip-el { background-color: #149eca; color: white; }
+			.chip-vc { background-color: black; color: white; }
+			.chip-nd { background-color: #69a064; color: white; }
+			.chip-3j { background-color: lightgray; color: black; }
+			.chip-sb { background-color: #1c1c1c; color: #3bc489; }
+			.chip-ws { background-color: lightgray; color: #f26100; }
+		</style>
+
+	</head>
+	<body>
+		<div class="segment title">
+			<p>Portfolio</p>
+			<span class="langSelector">
+				<a href="index.en.html"><img src="us.svg" alt="en" style="height: 1em;"></a>
+				<a href="index.ru.html"><img src="ru.svg" alt="ru" style="height: 1em;"></a>
+			</span>
+		</div>
+		<div class="segment"><p>Doing programming as a hobby and wishing to become an indie game developer since I was young, I was also doing web stuff since 2019. This includes not only small-scale fullstack and frontend projects, but also playable ads, standalone apps and scripts. Here is a brief overview of my accomplishments during last few years.</p></div>
+
+		
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Gatos</p>
+					<span class="chip chip-ts">TS</span>
+					<span class="chip chip-rt">React</span>
+					<span class="chip chip">Vite</span>
+					<span class="chip chip-vc">Vercel</span>
+					<span class="chip chip-sb">Supabase</span>
+				</div>
+			</summary>
+			<div>
+				<p><strong>Gatos</strong> is a directory of tagged memes about cats built with React. The idea of the project is used to learn about web frameworks in practice. 
+Latest React version features Supabase DB, full-fledged backend with custom authorization and database paging and frontend.</p>
+<p><a href="https://github.com/MilesVII/gatos">GitHub</a> <a href="https://gatos-wine.vercel.app/">Demo</a></p>
+<p><a href="https://f4f-wildcat.vercel.app/pages/qgatos/">Previous version</a>, built with Quazar (Vue) and Firebase</p>
+			</div>
+		</details>
+		
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Arstotzka</p>
+					<span class="chip chip-js">JS</span>
+				</div>
+			</summary>
+			<div>
+				<p>Arstotzka is NPM package for JS data validation, made primarily for validating API responses. Unlike alternatives, it features laconic schema.</p>
+<p><a href="https://www.npmjs.com/package/arstotzka">NPM</a> <a href="https://github.com/MilesVII/arstotzka#readme">GitHub</a></p>
+			</div>
+		</details>
+		
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Liminal</p>
+					<span class="chip chip-ts">TS</span>
+					<span class="chip chip-eb">ESBuild</span>
+					<span class="chip chip-3j">Three.js</span>
+				</div>
+			</summary>
+			<div>
+				<p>I had a dream of red 3D car in a browser and thought that it would be fun to implement it in real life, while learning.</p>
+<p><a href="https://github.com/MilesVII/liminalcar">GitHub</a> <a href="https://mikumiku.vercel.app/pages/liminal/">Demo</a></p>
+			</div>
+		</details>
+
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Cringepunk.js</p>
+					<span class="chip chip-js">JS</span>
+					<span class="chip chip-px">Pixi.js</span>
+					<span class="chip chip-wp">Webpack</span>
+				</div>
+			</summary>
+			<div>
+				<p><strong>Cringepunk</strong> is PIXI.js project template prepared for playable ads development.</p>
+<p><a href="https://github.com/MilesVII/cringepunk.js">GitHub</a> <a href="https://mikumiku.vercel.app/pages/cringepunk/">Demo</a></p>
+			</div>
+		</details>
+
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Prinz Eugen</p>
+					<span class="chip chip-js">JS</span>
+					<span class="chip chip-vc">Vercel</span>
+					<span class="chip chip-sb">Supabase</span>
+					<span class="chip">Telegram API</span>
+				</div>
+			</summary>
+			<div>
+				<p>Private service that automates content management for maintaining Telegram channels.</p>
+<p><a href="https://github.com/MilesVII/miku/tree/main/api/prinzeugen">GitHub</a></p>
+			</div>
+		</details>
+
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Battleships</p>
+					<span class="chip chip-js">JS</span>
+					<span class="chip chip-nd">Node.js</span>
+					<span class="chip chip-ws">WebSocket</span>
+				</div>
+			</summary>
+			<div>
+				<p>Multi-session online game of Battleships, using Node.js server for managing WebSocket connections between players. Client features esoteric UI built with custom font-faces.</p>
+<p><a href="https://github.com/MilesVII/battleships">GitHub</a> <a href="https://marine.realgrace.me/">Demo</a></p>
+			</div>
+		</details>
+
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Strelitzia</p>
+					<span class="chip chip-js">JS</span>
+					<span class="chip chip-el">Electron</span>
+					<span class="chip">Appstore API</span>
+				</div>
+			</summary>
+			<div>
+				<p><strong>Strelitiza</strong> is standalone Electron app that provides convenient user interface for Apple's AppStore services, using their undocumented backend. Abandoned due to lack of access to developer account, currently unusable due to API changes.</p>
+<p><strong>Third-party components:</strong></p>
+<ul>
+<li><a href="https://www.electronjs.org/">Electron</a> and <a href="https://www.electronforge.io/">Electron Forge</a></li>
+<li><a href="https://handsontable.com">Handsontable</a>, JS library providing spreadsheet-like tables for UI. Kinda buggy, tbh</li>
+<li>Inspired by Fastlane's <a href="https://github.com/fastlane/fastlane/tree/master/spaceship">Spaceship</a></li>
+<li>Background art by <a href="https://www.deviantart.com/otj194">otj194</a> on fair-use terms</li>
+</ul>
+			</div>
+		</details>
+
+		<details class="segment">
+			<summary>
+				<div class="chipRow">
+					<p>Other stuff I did</p>
+					<span class="chip">WebExtensions</span>
+					<span class="chip">C</span>
+					<span class="chip">Java</span>
+				</div>
+			</summary>
+			<div>
+				<p>Apart from projects listed above I was/am working on various minor non-public projects: WebExtensions, games and programs written in C, outdated Java Android apps and some more.</p>
+			</div>
+		</details>
+	</body>
+</html>
