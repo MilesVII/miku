@@ -10,7 +10,8 @@ const PUB_FLAGS = {
 	NO_SIZE_LIMIT: "nosizelimit",
 	KEEP_AFTER_POST: "keep",
 	CUSTOM_BUTTONS: "custombuttons",
-	MARKDOWN_LINKS: "markdownlinks"
+	MARKDOWN_LINKS: "markdownlinks",
+	DOUBLE_TAP: "doubletap"
 };
 const imageProxy = url => `https://mikumiku.vercel.app/api/imgproxy?j=2&url=${url}`;
 
@@ -913,18 +914,20 @@ export default async function handler(request, response) {
 			const count = safe(() => parseInt(request.body.count, 10)) || 1;
 			for (let _ = 0; _ < count && availablePosts.length > 0; ++_){
 				const index = Math.floor(availablePosts.length * Math.random());
-				selectedPosts.push(availablePosts[index]);
-				availablePosts = availablePosts.filter((v, i) => i != index);
+				selectedPosts.push(availablePosts.splice(index, 1)[0]);
 			}
 
-			for (const post of selectedPosts){
-				
+			while (selectedPosts.length > 0){
+				const post = selectedPosts.pop();
 				const error = /* flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
 					await publish2URL(post.message, request.body.target, flags, request.body.extras)
 				:
 					*/ await publish2Telegram(post.message, post["users"]["tg_token"], target, request.body.extras, flags);
 
 				if (error){
+					if (flags.includes(PUB_FLAGS.DOUBLE_TAP) && availablePosts.length > 0){
+						selectedPosts.push(availablePosts.pop());
+					}
 					await Promise.allSettled([
 						tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error)}`),
 						db(
