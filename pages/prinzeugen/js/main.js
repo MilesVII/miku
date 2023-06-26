@@ -193,7 +193,31 @@ async function manualGrab(){
 	}
 	report(`${newRows.length} new entries`);
 
+	updateCurtainMessage(`Updating state`);
+	const grabbers = await callAPI("getGrabbers", {}, true);
+	if (grabbers.status == 200) loadGrabbers(grabbers.data);
+
+	await reloadModerables(false);
+
+	pullCurtain(false);
+}
+
+async function selectiveGrab(grabberId){
+	pullCurtain(true);
+	const grabbersReference = await callAPI("getGrabbers", {}, true);
+	let newRows = [];
 	
+	updateCurtainMessage(`Grabbing #${grabberId}`);
+	const response = await callAPI("grab", {id: grabberId}, true);
+	if (response.status != 200){
+		report(`Grab #${grabberId} failed`);
+		console.error(response);
+	} else
+		newRows = newRows.concat(response.data);
+	
+	report(`${newRows.length} new entries`);
+
+	updateCurtainMessage(`Updating state`);
 	const grabbers = await callAPI("getGrabbers", {}, true);
 	if (grabbers.status == 200) loadGrabbers(grabbers.data);
 
@@ -258,7 +282,7 @@ function loadGrabbers(grabs){
 	const list = document.querySelector("#grabbersList");
 	list.innerHTML = "";
 
-	for (let g of grabs){
+	grabs.forEach((g, i) => {
 		const meta = GRABBERS[g.type];
 		const proto = fromTemplate(meta.template_id);
 		proto.dataset.type = g.type;
@@ -270,8 +294,14 @@ function loadGrabbers(grabs){
 		});
 		proto.appendChild(remover);
 
+		const grabber = fromTemplate("selective_grab");
+		grabber.querySelector(".button").addEventListener("click", () => {
+			selectiveGrab(i);
+		});
+		proto.insertBefore(grabber, proto.children[0]);
+
 		list.appendChild(proto);
-	}
+	});
 }
 
 function addGrabber(type){

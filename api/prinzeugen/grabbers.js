@@ -80,6 +80,9 @@ async function twtGetUserIdByName(token, username){
 
 async function twtGetTweets(token, userId, offset, pagination){
 	const EMPTY_RESULT = {tweets: []};
+	//Reading tweets is not free anymore
+	return EMPTY_RESULT;
+
 	const paginationParameter = pagination ? `pagination_token=${pagination}&` : "";
 	const url = `https://api.twitter.com/2/users/${userId}/tweets?${paginationParameter}${[
 		"exclude=retweets,replies",
