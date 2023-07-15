@@ -232,7 +232,7 @@ export const grabbersMeta = {
 				lastSeen: "number"
 			}
 		},
-		action: async (grabber, skipArtists = false) => {
+		action: async (grabber, options = {}) => {
 			const lastSeen = grabber.state.lastSeen || 0;
 			const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
 
@@ -250,6 +250,7 @@ export const grabbersMeta = {
 				tags: query,
 				pid: 0,
 				json: 1,
+				...(options.batchSize ? {limit: options.batchSize} : {}),
 				api_key: grabber.credentials.token,
 				user_id: grabber.credentials.user
 			});
@@ -273,7 +274,7 @@ export const grabbersMeta = {
 
 			const allTags = unique(posts.map(p => p.tags).reduce((p, c) => p.concat(c), []));
 			if (posts.length > 0){
-				const allArtists = skipArtists ? [] : await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
+				const allArtists = options.skipArtists ? [] : await glbFilterArtists(allTags, grabber.credentials.user, grabber.credentials.token);
 				if (allArtists)
 					posts.forEach(p => p.artists = allArtists.filter(a => p.tags.includes(a)));
 				else

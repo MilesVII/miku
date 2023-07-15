@@ -202,13 +202,18 @@ async function manualGrab(){
 	pullCurtain(false);
 }
 
-async function selectiveGrab(grabberId){
+async function selectiveGrab(grabberId, batchSize){
 	pullCurtain(true);
 	const grabbersReference = await callAPI("getGrabbers", {}, true);
 	let newRows = [];
-	
+
+	const params = {
+		id: grabberId,
+		...(batchSize ? {batchSize: batchSize} : {})
+	};
+
 	updateCurtainMessage(`Grabbing #${grabberId}`);
-	const response = await callAPI("grab", {id: grabberId}, true);
+	const response = await callAPI("grab", params, true);
 	if (response.status != 200){
 		report(`Grab #${grabberId} failed`);
 		console.error(response);
@@ -294,11 +299,14 @@ function loadGrabbers(grabs){
 		});
 		proto.appendChild(remover);
 
-		const grabber = fromTemplate("selective_grab");
-		grabber.querySelector(".button").addEventListener("click", () => {
+		const grabControls = fromTemplate("grab_controls");
+		grabControls.querySelectorAll("div")[0].addEventListener("click", () => {
 			selectiveGrab(i);
 		});
-		proto.insertBefore(grabber, proto.children[0]);
+		grabControls.querySelectorAll("div")[1].addEventListener("click", () => {
+			selectiveGrab(i, 50);
+		});
+		proto.insertBefore(grabControls, proto.children[0]);
 
 		list.appendChild(proto);
 	});

@@ -50,7 +50,8 @@ const schema = {
 	grab: {
 		user: "number",
 		userToken: "string",
-		id: [OPTIONAL, "number"]
+		id: [OPTIONAL, "number"],
+		batchSize: [OPTIONAL, "number"]
 	},
 	linkCache: {
 		user: "number",
@@ -274,7 +275,7 @@ function parseContentRange(range){
 	}
 }
 
-async function grab(user, token, id){
+async function grab(user, token, id, batchSize){
 	function flatten(arr){
 		return arr.reduce((p, c) => p.concat(c), []);
 	}
@@ -293,13 +294,18 @@ async function grab(user, token, id){
 			return null;
 	}
 
+	const options = {
+		skipArtists: user == 3,
+		batchSize: batchSize
+	};
+
 	let moderated = [];
 	let approved = [];
 	for (const grabber of selection){
 		grabber.state.lastGrab = grabber.state.lastGrab || 0;
 		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
 			grabber.state.lastGrab = now;
-			const prom = grabbersMeta[grabber.type].action(grabber, user == 3);
+			const prom = grabbersMeta[grabber.type].action(grabber, options);
 
 			if (grabber.config.moderated) 
 				moderated.push(prom);
@@ -668,7 +674,7 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			const newRows = await grab(request.body.user, request.body.userToken, request.body.id);
+			const newRows = await grab(request.body.user, request.body.userToken, request.body.id, request.body.batchSize);
 			if (newRows == null){
 				response.status(400).send("Wrong ID specified (out of range)");
 				return;
