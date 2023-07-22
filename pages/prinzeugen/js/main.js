@@ -399,10 +399,11 @@ function renderModerable(message, id){
 	return proto;
 }
 
+let scalingLock = false;
 function upscalePreview(doAll){
+	const upscaleKey = "weewee";
 	async function upscale(e){
-		if (e.dataset.upscaled) return;
-		e.dataset.upscaled = "weewee";
+		if (e.dataset.upscaled === upscaleKey) return;
 
 		const url = `/api/imgproxy?j=1&w=0&url=${e.dataset.original}`;
 		const response = await fetch(url);
@@ -411,10 +412,15 @@ function upscalePreview(doAll){
 		const data = await response.arrayBuffer();
 		const blob = new Blob([data]);
 		e.querySelector("img").src = URL.createObjectURL(blob);
+		e.dataset.upscaled = upscaleKey;
 	}
 
+	if (scalingLock) return;
+
 	if (doAll){
-		document.querySelectorAll(".previewSection").forEach(e => upscale(e));
+		scalingLock = true;
+		const scaleJobs = document.querySelectorAll(".previewSection").map(e => upscale(e));
+		Promise.allSettled(scaleJobs).then(() => scalingLock = false);
 	} else {
 		const focused = document.activeElement;
 		if (!focused.classList.contains("previewSection")) return;
