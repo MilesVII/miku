@@ -419,7 +419,7 @@ function upscalePreview(doAll){
 
 	if (doAll){
 		scalingLock = true;
-		const scaleJobs = document.querySelectorAll(".previewSection").map(e => upscale(e));
+		const scaleJobs = Array.from(document.querySelectorAll(".previewSection")).map(e => upscale(e));
 		Promise.allSettled(scaleJobs).then(() => scalingLock = false);
 	} else {
 		const focused = document.activeElement;
