@@ -395,9 +395,10 @@ function renderModerable(message, id){
 	return proto;
 }
 
+const UPSCALE_RETRY_COUNT = 3;
 function upscalePreview(){
-	async function upscale(e, retriesLeft = 3){
-		if (e.dataset.upscaled === "weewee") return;
+	async function upscale(e, retriesLeft = UPSCALE_RETRY_COUNT){
+		if (e.dataset.upscaled === "weewee" && retriesLeft === UPSCALE_RETRY_COUNT) return;
 		e.dataset.upscaled = "weewee";
 
 		const url = `/api/imgproxy?j=1&w=0&url=${e.dataset.original}`;
