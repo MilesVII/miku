@@ -56,12 +56,8 @@ async function main(){
 			action: () => decide(false)
 		},
 		{
-			keys: ["Backspace"],
-			action: () => upscalePreview(false)
-		},
-		{
 			keys: ["Digit0"],
-			action: () => upscalePreview(true)
+			action: () => upscalePreview()
 		}
 	]);
 }
@@ -399,33 +395,28 @@ function renderModerable(message, id){
 	return proto;
 }
 
-let scalingLock = false;
-function upscalePreview(doAll){
-	const upscaleKey = "weewee";
-	async function upscale(e){
-		if (e.dataset.upscaled === upscaleKey) return;
+function upscalePreview(){
+	async function upscale(e, retriesLeft = 3){
+		if (e.dataset.upscaled === "weewee") return;
+		e.dataset.upscaled = "weewee";
 
 		const url = `/api/imgproxy?j=1&w=0&url=${e.dataset.original}`;
 		const response = await fetch(url);
+		if (response.status === 504) {
+			if (retriesLeft <= 0) return;
+			await sleep(Math.random() * 5000);
+			await upscale(e, retriesLeft - 1);
+			return;
+		}
 		if (!response.ok) return;
 		if (!response.headers.get("content-type").startsWith("image/")) return;
 		const data = await response.arrayBuffer();
 		const blob = new Blob([data]);
 		e.querySelector("img").src = URL.createObjectURL(blob);
-		e.dataset.upscaled = upscaleKey;
 	}
 
-	if (scalingLock) return;
-
-	if (doAll){
-		scalingLock = true;
-		const scaleJobs = Array.from(document.querySelectorAll(".previewSection")).map(e => upscale(e));
-		Promise.allSettled(scaleJobs).then(() => scalingLock = false);
-	} else {
-		const focused = document.activeElement;
-		if (!focused.classList.contains("previewSection")) return;
-		upscale(focused);
-	}
+	const scaleJobs = Array.from(document.querySelectorAll(".previewSection")).map(e => upscale(e));
+	Promise.allSettled(scaleJobs).then(() => scalingLock = false);
 }
 
 function decide(approve){
