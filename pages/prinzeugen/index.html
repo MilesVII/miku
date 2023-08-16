@@ -48,13 +48,13 @@
 					</span>
 				</div>
 				<div class="row flexCenter">
-					<span class="col halfWide">Tags</span>
+					<span class="col halfWide">Tags<br /><span id="gb_tflicker" class="tag"></span></span>
 					<span class="col halfWide">
 						<textarea id="gb_tags" class="wide"></textarea>
 					</span>
 				</div>
 				<div class="row flexCenter">
-					<span class="col halfWide">Blacklist</span>
+					<span class="col halfWide">Blacklist<br /><span id="gb_bflicker" class="tag"></span></span>
 					<span class="col halfWide">
 						<textarea id="gb_blacks" class="wide"></textarea>
 					</span>
@@ -199,10 +199,13 @@
 
 				<div id="mdr" class="tabtarget page hidden">
 					<div class="row flexCenter">
-						<span class="col halfWide">
+						<span class="">
 							<div class="button wideButton" onclick="reloadModerables()">Reload</div>
 						</span>
-						<span class="col halfWide">
+						<span class="">
+							<div class="button wideButton" onclick="upscalePreview()">Upscale</div>
+						</span>
+						<span class="">
 							<div id="moderateButton" class="button wideButton" onclick="moderate()">Moderate</div>
 						</span>
 					</div>

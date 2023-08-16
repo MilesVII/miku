@@ -25,6 +25,9 @@ const GRABBERS = {
 			}
 		}),
 		fill: (data, el) => {
+			el.querySelector("#gb_tags").addEventListener("input", () => updateGrabberFlicker(el));
+			el.querySelector("#gb_blacks").addEventListener("input", () => updateGrabberFlicker(el));
+
 			el.querySelector("#gb_user").value = data.credentials.user;
 			el.querySelector("#gb_key").value = data.credentials.token;
 
@@ -34,6 +37,8 @@ const GRABBERS = {
 			el.querySelector("#gb_moderated").checked = data.config.moderated;
 
 			el.querySelector("#gb_last").value = data.state.lastSeen;
+
+			updateGrabberFlicker(el);
 			return el;
 		}
 	},

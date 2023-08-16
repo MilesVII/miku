@@ -190,9 +190,7 @@ async function manualGrab(){
 	report(`${newRows.length} new entries`);
 
 	updateCurtainMessage(`Updating state`);
-	const grabbers = await callAPI("getGrabbers", {}, true);
-	if (grabbers.status == 200) loadGrabbers(grabbers.data);
-
+	await updateGrabbers();
 	await reloadModerables(false);
 
 	pullCurtain(false);
@@ -200,7 +198,6 @@ async function manualGrab(){
 
 async function selectiveGrab(grabberId, batchSize){
 	pullCurtain(true);
-	const grabbersReference = await callAPI("getGrabbers", {}, true);
 	let newRows = [];
 
 	const params = {
@@ -219,12 +216,15 @@ async function selectiveGrab(grabberId, batchSize){
 	report(`${newRows.length} new entries`);
 
 	updateCurtainMessage(`Updating state`);
-	const grabbers = await callAPI("getGrabbers", {}, true);
-	if (grabbers.status == 200) loadGrabbers(grabbers.data);
-
+	await updateGrabbers();
 	await reloadModerables(false);
 
 	pullCurtain(false);
+}
+
+async function updateGrabbers(){
+	const grabbers = await callAPI("getGrabbers", {}, true);
+	if (grabbers.status == 200) loadGrabbers(grabbers.data);
 }
 
 async function manualCache(){
@@ -276,6 +276,7 @@ async function saveGrabbers(){
 	const response = await callAPI("setGrabbers", {
 		grabbers: grabs
 	});
+	if (response.status === 200) await updateGrabbers();
 	pullCurtain(false);
 }
 
@@ -285,32 +286,22 @@ function loadGrabbers(grabs){
 
 	grabs.forEach((g, i) => {
 		const meta = GRABBERS[g.type];
-		const proto = fromTemplate(meta.template_id);
-		proto.dataset.type = g.type;
+		const proto = renderGrabber(g.type, i);
 		meta.fill(g, proto);
-
-		const remover = fromTemplate("remove_grabber");
-		remover.querySelector(".button").addEventListener("click", () => {
-			proto.remove();
-		});
-		proto.appendChild(remover);
-
-		const grabControls = fromTemplate("grab_controls");
-		grabControls.querySelectorAll("div")[0].addEventListener("click", () => {
-			selectiveGrab(i);
-		});
-		grabControls.querySelectorAll("div")[1].addEventListener("click", () => {
-			selectiveGrab(i, 50);
-		});
-		proto.insertBefore(grabControls, proto.children[0]);
 
 		list.appendChild(proto);
 	});
 }
 
 function addGrabber(type){
+	const list = document.querySelector("#grabbersList");
+	const proto = renderGrabber(type);
+	if (proto) list.appendChild(proto);
+}
+
+function renderGrabber(type, i){
 	const meta = GRABBERS[type];
-	if (!meta) return;
+	if (!meta) return null;
 	const proto = fromTemplate(meta.template_id);
 	proto.dataset.type = type;
 
@@ -320,8 +311,27 @@ function addGrabber(type){
 	});
 	proto.appendChild(remover);
 
-	const list = document.querySelector("#grabbersList");
-	list.appendChild(proto);
+	if (i === undefined){
+		const hint = document.createElement("div");
+		hint.textContent = "Save grabbers before grabbing";
+		proto.insertBefore(hint, proto.children[0]);
+	} else {
+		const grabControls = fromTemplate("grab_controls");
+		grabControls.querySelectorAll("div")[0].addEventListener("click", () => {
+			selectiveGrab(i);
+		});
+		grabControls.querySelectorAll("div")[1].addEventListener("click", () => {
+			selectiveGrab(i, 50);
+		});
+		proto.insertBefore(grabControls, proto.children[0]);
+	}
+
+	return proto;
+}
+
+function updateGrabberFlicker(el) {
+	genericFlickerUpdate("#gb_tags", "#gb_tflicker", contents => [contents.split("\n").length], el);
+	genericFlickerUpdate("#gb_blacks", "#gb_bflicker", contents => [contents.split("\n").length], el);
 }
 
 async function reloadModerables(pullCurtains = true){
@@ -396,7 +406,7 @@ function renderModerable(message, id){
 }
 
 const UPSCALE_RETRY_COUNT = 3;
-function upscalePreview(){
+async function upscalePreview(){
 	async function upscale(e, retriesLeft = UPSCALE_RETRY_COUNT){
 		if (e.dataset.upscaled === "weewee" && retriesLeft === UPSCALE_RETRY_COUNT) return;
 		e.dataset.upscaled = "weewee";
@@ -416,8 +426,14 @@ function upscalePreview(){
 		e.querySelector("img").src = URL.createObjectURL(blob);
 	}
 
-	const scaleJobs = Array.from(document.querySelectorAll(".previewSection")).map(e => upscale(e));
-	Promise.allSettled(scaleJobs).then(() => scalingLock = false);
+	const targets = Array.from(document.querySelectorAll(".previewSection"));
+	const chomnks = chunk(targets, 7);
+	for (const chonk of chomnks) {
+		const scaleJobs = chonk.map(e => upscale(e));
+		await Promise.allSettled(scaleJobs);
+		console.log("chonk done");
+	};
+	scalingLock = false;
 }
 
 function decide(approve){
@@ -608,23 +624,31 @@ async function loadMessagePool(page = 0){
 }
 
 function updateSettingsFlicker(){
-	const textarea = document.querySelector("#stg_additional");
-	const flicker = document.querySelector("#stg_flicker");
+	genericFlickerUpdate("#stg_additional", "#stg_flicker",
+		contents => {
+			if (contents){
+				const parsed = safe(() => JSON.parse(contents));
+				if (parsed == null){
+					return ["Not JSON", "hsla(20, 72%, 23%, .42)"];
+				} else {
+					return ["JSON", "hsla(100, 72%, 23%, .42)"];
+				}
+			} else {
+				return ["Empty", "hsla(0, 0%, 60%, .42)"];
+			}
+		}
+	);
+}
+
+function genericFlickerUpdate(taQ, flQ, cb, root = document) {
+	const textarea = root.querySelector(taQ);
+	const flicker = root.querySelector(flQ);
 	const contents = textarea.value.trim();
 
-	if (textarea.value.trim()){
-		const parsed = safe(() => JSON.parse(contents));
-		if (parsed == null){
-			flicker.textContent = "Not JSON";
-			flicker.style.backgroundColor = "hsla(20, 72%, 23%, .42)";
-		} else {
-			flicker.textContent = "JSON";
-			flicker.style.backgroundColor = "hsla(100, 72%, 23%, .42)";
-		}
-	} else {
-		flicker.textContent = "Empty";
-		flicker.style.backgroundColor = "hsla(0, 0%, 60%, .42)";
-	}
+	const [text, color = "hsla(0, 0%, 60%, .42)"] = cb(contents);
+
+	flicker.textContent = text;
+	flicker.style.backgroundColor = color;
 }
 
 async function saveSettings(){
