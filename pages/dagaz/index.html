@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="description" content="Real-time online SVG editor" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;1,100&display=swap" rel="stylesheet">
+		<script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+		<script src="ace/theme-nord_dark.js" type="text/javascript" charset="utf-8"></script>
+		<script src="ace/mode-svg.js" type="text/javascript" charset="utf-8"></script>
+		
+		<title>Dagaz: SVG editor</title>
+		<style>
+			:root {
+				--dark: #27374D;
+				--halfdark: #526D82;
+				--halflight: #9DB2BF;
+				--light: #DDE6ED;
+
+				--spacing_basic: .5em;
+				--spacing_small: .2em;
+			}
+
+			* {
+				margin: 0;
+				border: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html, body {
+				height: 100%;
+				font: normal 300 20px "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+				background-color: var(--dark);
+				color: var(--light);
+			}
+
+			input[type="text"], textarea {
+				font: normal 300 20px "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+				background-color: var(--halfdark);
+				padding: var(--spacing_small);
+				color: var(--light);
+			}
+			input[type="text"]:focus, textarea:focus {
+				outline: none;
+			}
+
+			textarea {
+				resize: none;
+				height: auto;
+				height: 100%;
+			}
+
+			.mainRow {
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+
+				display: grid;
+				grid-template-areas: "a b";
+				grid-template-columns: 1fr 1fr;
+				gap: 0;
+			}
+
+			.controls {
+				grid-area: a;
+				width: 100%;
+				height: 100%;
+				overflow: hidden auto;
+
+				display: flex;
+				flex-flow: column nowrap;
+				gap: var(--spacing_basic);
+				padding: var(--spacing_basic);
+			}
+
+			.preview {
+				grid-area: b;
+				width: 100%;
+				height: 100%;
+				overflow: auto;
+				padding: var(--spacing_basic);
+			}
+
+			.preview > svg {
+				width: 100%;
+			}
+
+			.row {
+				display: flex;
+				flex-flow: row wrap;
+				gap: var(--spacing_basic);
+				align-items: baseline;
+			}
+
+			.shortField {
+				width: 10vw;
+			}
+
+			.button {
+				cursor: pointer;
+				background-color: var(--halfdark);
+				transition: background-color .2s;
+				padding: var(--spacing_small);
+			}
+			.button:hover {
+				background-color: var(--dark);
+			}
+			.button:active {
+				background-color: var(--halflight);
+			}
+
+			a {
+				text-decoration: none;
+				color: inherit;
+			}
+
+			#editor {
+				position: relative;
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="mainRow">
+			<div class="controls">
+				<div class="row">
+					<div>Width</div>
+					<input type="text" inputmode="numeric" class="shortField" oninput="refresh()" value="100" />
+					<div>Height</div>
+					<input type="text" inputmode="numeric" class="shortField" oninput="refresh()" value="100" />
+				</div>
+				<div class="row">
+					<div class="button" onclick="copy()">Copy</div>
+					<a class="button" id="save" download="image.svg">Save</a>
+					<!--<div class="button" onclick="refresh()">Refresh</div>-->
+					<a href="https://developer.mozilla.org/en-US/docs/Web/SVG/Element" target="_blank" class="button">
+						MDN
+					</a>
+					<a href="https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/d" target="_blank" class="button">
+						Path Commands
+					</a>
+				</div>
+				<div id="editor">&lt;path fill=&quot;#DA4000&quot; d=&quot;M0,0 L100,100 L100,0 L0,100 Z&quot;/&gt;</div>
+				<!--<textarea spellcheck="false" oninput="refresh()"></textarea>-->
+			</div>
+			<div class="preview"></div>
+		</div>
+
+		<script>
+			const editor = ace.edit("editor");
+			editor.setTheme("ace/theme/nord_dark");
+			editor.session.setMode(new (ace.require("ace/mode/svg").Mode));
+			editor.session.on("change", refresh);
+
+			refresh();
+
+			function compile() {
+				const code = editor.getValue(); // document.querySelector("textarea").value;
+				const [wField, hField] = document.querySelectorAll(`.controls > .row > input[type="text"]`);
+				const w = parseFloat(wField.value, 10) || 0;
+				const h = parseFloat(hField.value, 10) || 0;
+
+				return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${code}</svg>`;
+			}
+
+			function minify(code){
+				return (code
+					.replaceAll(/(^[[:blank:]]+)/gm, "")
+					.replaceAll("\n", " "));
+			}
+
+			function refresh(){
+				const preview = document.querySelector(".preview");
+				const code = compile();
+				preview.innerHTML = code;
+				
+				const downloader = document.querySelector("#save");
+				const encoded = encodeURIComponent(minify(code));
+				downloader.href = `data:image/svg+xml;charset=utf-8,${encoded}`;
+			}
+
+			function copy(){
+				navigator.clipboard.writeText(compile());
+			}
+		</script>
+	</body>
+</html>
