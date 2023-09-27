@@ -1,6 +1,6 @@
 
-import { validate, ARRAY_OF, OPTIONAL, DYNAMIC } from "arstotzka"; 
-import { last, phetch, phetchV2, safeParse, tg, tgReport } from "./utils.js";
+import { validate } from "arstotzka"; 
+import { phetchV2, safeParse, tg, tgReport } from "./utils.js";
 
 export function sleep(ms){
 	return new Promise(resolve => setTimeout(resolve, ms));
@@ -43,15 +43,15 @@ async function setStorage(binId, mKey, data){
 	}, JSON.stringify(data));
 }
 
-function extractPhotoURL(sizes){
-	const type = ["z", "y", "x", "w"].find(t => sizes.find(s => s.type === t));
-	if (type)
-		return sizes.find(s => s.type === type).url;
-	else
-		return null;
-}
-
 function cleansing(vkPosts){
+	function extractPhotoURL(sizes){
+		const type = ["z", "y", "x", "w"].find(t => sizes.find(s => s.type === t));
+		if (type)
+			return sizes.find(s => s.type === type).url;
+		else
+			return null;
+	}
+
 	//console.log(vkPosts[0])
 	return vkPosts.map(p => ({
 		id: p.id,
