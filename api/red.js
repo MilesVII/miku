@@ -15,7 +15,7 @@ export async function get(key, dbCreds) {
 	const client = getClient(dbCreds);
 	await client.connect();
 	if (!Array.isArray(key)) key = [key];
-	const values = await Promise.all(key.map(k => client.get(key)));
+	const values = await Promise.all(key.map(k => client.get(k)));
 	await client.disconnect();
 	return values;
 }

@@ -237,10 +237,10 @@ export const grabbersMeta = {
 			const mandatoryFilter = ["sort:id:asc", `id:>${lastSeen}`];
 
 			const tags = grabber.config.tags.join(" ~ ");
-			const black = grabber.config.blacks.join(" ~ ");
+			const black = grabber.config.blacks.map(bt => `-${bt}`).join(" ");
 			const white = mandatoryFilter.concat(grabber.config.whites).join(" ");
 			const tq = grabber.config.tags.length > 1 ? `{${tags}}` : tags;
-			const bq = grabber.config.blacks.length > 0 ? `-{${black}} ` : "";
+			const bq = grabber.config.blacks.length > 0 ? `${black} ` : "";
 			const query = `${tq} ${bq}${white}`;
 
 			const params = buildURLParams({
