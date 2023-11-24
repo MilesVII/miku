@@ -58,6 +58,10 @@ async function main(){
 		{
 			keys: ["Digit0"],
 			action: () => upscalePreview()
+		},
+		{
+			keys: ["ShiftRight", "KeyM"],
+			action: () => fixFocus()
 		}
 	]);
 }
@@ -434,6 +438,16 @@ async function upscalePreview(){
 		console.log("chonk done");
 	};
 	scalingLock = false;
+}
+
+function fixFocus(){
+	const previews =  Array.from(document.querySelectorAll(".previewSection"));
+	if (previews.length === 0) return;
+	const target = previews.find(p => !(p.classList.contains("approved") || p.classList.contains("rejected")));
+	if (target)
+		target.focus();
+	else
+		previews[0].focus();
 }
 
 function decide(approve){
