@@ -115,7 +115,7 @@ export function dl(url){
 	});
 }
 
-export function tg(command, payload, token = process.env.TG_TOKEN){
+export function tg(command, payload, token = process.env.MIKU_TG_TOKEN){
 	const url = `https://api.telegram.org/bot${token}/${command}`;
 	const options = {
 		method: "POST",
@@ -128,11 +128,11 @@ export function tg(command, payload, token = process.env.TG_TOKEN){
 	return phetch(url, options, payload);
 }
 
-export function tgReport(message){
+export function tgReport(message, token){
 	return tg("sendMessage", {
 		chat_id: process.env.TG_T_ME,
 		text: message
-	});
+	}, token);
 }
 
 export function parseTelegramTarget(raw){
