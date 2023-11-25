@@ -2,7 +2,7 @@
 import * as RedisAccess from "./red.js"
 import { tg, tgReport, pickRandom } from "./utils.js";
 
-const LOCAL_MODE = false;
+const LOCAL_MODE = true;
 
 function roll(threshold) {
 	return Math.random() < threshold;
@@ -77,38 +77,8 @@ export default async function handler(request, response) {
 		port: process.env.RIN_REDIS_PORT
 	};
 	
-	const [
-		appealsRaw,
-		appealedCommandsRaw,
-		wats,
-		ahs,
-		masters,
-		badFortunes,
-		basicCommandsRaw,
-		pezdaStickers
-	] = await RedisAccess.get([
-		"appeals",
-		"appeal_commands",
-		"wat",
-		"ahs",
-		"masters",
-		"bad_fortunes",
-		"basic_commands",
-		"pezda_stickers"
-	], dbCreds);
-
-	const prefs = {
-		appeals: JSON.parse(appealsRaw),
-		appealedCommands: JSON.parse(appealedCommandsRaw),
-		basicCommands: JSON.parse(basicCommandsRaw),
-		wats: wats.split("\n"),
-		ahs: ahs.split("\n"),
-		masters: masters.split("\n"),
-		fortunes: {
-			bad: badFortunes.split("\n")
-		},
-		pezdaStickers: pezdaStickers.split("\n")
-	}
+	const [prefsRaw] = await RedisAccess.get("prefs", dbCreds);
+	const prefs = JSON.parse(prefsRaw);
 
 	// const tgr = await tg("setWebhook", {
 	// 	url: "https://mikumiku.vercel.app/api/rin",
@@ -117,7 +87,7 @@ export default async function handler(request, response) {
 
 	if (LOCAL_MODE){
 		const tgCommons = {
-			chat_id: 400944318,
+			chat_id: process.env.TG_T_ME,
 		};
 		await rinModel("sample message", tgCommons, 0, false, prefs);
 	} else {
