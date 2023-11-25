@@ -2,7 +2,7 @@
 import * as RedisAccess from "./red.js"
 import { tg, tgReport, pickRandom } from "./utils.js";
 
-const LOCAL_MODE = true;
+const LOCAL_MODE = false;
 
 function roll(threshold) {
 	return Math.random() < threshold;
