@@ -23,6 +23,6 @@ export async function get(key, dbCreds) {
 export async function set(key, dbCreds, value) {
 	const client = getClient(dbCreds);
 	await client.connect();
-	await client.set(key, JSON.stringify(value));
+	await client.set(key, value);
 	await client.disconnect();
 }
