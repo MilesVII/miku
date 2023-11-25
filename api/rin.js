@@ -66,6 +66,7 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs){
 export default async function handler(request, response) {
 	console.log(LOCAL_MODE)
 	if (!LOCAL_MODE && !request.body?.message) {
+		tgReport(`rin rejection\n${JSON.stringify(request.body)}`)
 		response.status(400).send();
 		return;
 	}
