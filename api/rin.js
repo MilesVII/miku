@@ -18,6 +18,8 @@ function getCommand(message, commands) {
 async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs){
 	const rinToken = process.env.RIN_TG_TOKEN;
 	const appeals = prefs.appeals;
+	const msgOriginal = msg;
+	msg = msg.toLowerCase();
 
 	if (appeals.some(a => msg.startsWith(a))){
 		const command = getCommand(msg, prefs.appealedCommands);
