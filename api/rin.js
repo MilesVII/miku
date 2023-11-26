@@ -111,7 +111,7 @@ export default async function handler(request, response) {
 		await rinModel("sample message", tgCommons, 0, false, prefs);
 	} else {
 		const requester = request.body.message.from.id
-		const masterSpeaking = masters.split("\n").some(m => requester == m);
+		const masterSpeaking = prefs.masters.split("\n").some(m => requester == m);
 		const msg = request.body.message.text.trim();
 		const tgCommons = {
 			chat_id: request.body.message.chat.id,
