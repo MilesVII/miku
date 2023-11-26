@@ -50,7 +50,8 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs){
 				for (let loader of loaders) {
 					await tg("sendMessage", {
 						...tgOptions,
-						text: loader.replace("#", name),
+						parseMode: "MarkdownV2",
+						text: loader.replace("#", `*${name}*`)
 					}, rinToken);
 					await sleep(1000);
 				}
