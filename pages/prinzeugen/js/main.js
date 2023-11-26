@@ -637,6 +637,21 @@ async function loadMessagePool(page = 0){
 	pullCurtain(false);
 }
 
+let wipeLock = true;
+async function wipePool(){
+	if (wipeLock){
+		wipeLock = false;
+		console.log("safety off. call function again to wipe current pool");
+	} else {
+		wipeLock = true;
+		pullCurtain(true);
+		const wipeResponse = await callAPI("wipePool", {}, true);
+		pullCurtain(false);
+		if (wipeResponse.status === 200)
+			location.reload();
+	}
+}
+
 function updateSettingsFlicker(){
 	genericFlickerUpdate("#stg_additional", "#stg_flicker",
 		contents => {

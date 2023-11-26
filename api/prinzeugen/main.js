@@ -77,6 +77,10 @@ const schema = {
 		user: "number",
 		page: "number"
 	},
+	wipePool: {
+		user: "number",
+		userToken: "string"
+	},
 	moderate: {
 		user: "number",
 		userToken: "string",
@@ -828,6 +832,17 @@ export default async function handler(request, response) {
 				response.status(502).send();
 				return;
 			}
+		}
+		case ("wipePool"): {
+			const re = await db2(
+				`/rest/v1/pool?user=eq.${request.body.user}`,
+				"DELETE",
+				null,
+				null
+			);
+			const status = wegood(re.status) ? 200 : re.status;
+			response.status(status).send();
+			return;
 		}
 		case ("moderate"): {
 			const decisionSchema = {
