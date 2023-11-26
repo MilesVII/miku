@@ -155,8 +155,8 @@ export function escapeMarkdown(raw){
 	return raw.replace(/[\*\(\)\[\]\+\-\\_`#<>]/g, m => substitutions[m]);
 }
 
-export function pickRandom(array) {
-	return array[Math.floor(array.length * Math.random())]
+export function pickRandom(array, random = Math.random()) {
+	return array[Math.floor(array.length * random)]
 }
 
 export async function processImage(src, options){
