@@ -126,8 +126,8 @@ export default async function handler(request, response) {
 			chat_id: request.body.message.chat.id,
 			reply_to_message_id: request.body.message.message_id
 		};
-		const autoAppeal = request.body.message?.reply_to_message?.id == prefs.me;
-		await tgReport(`${request.body.message?.reply_to_message?.id}\n${prefs.me}`, process.env.RIN_TG_TOKEN);
+		const autoAppeal = request.body.message?.reply_to_message?.from?.id == prefs.me;
+		await tgReport(`${request.body.message?.reply_to_message?.from?.id}\n${prefs.me}`, process.env.RIN_TG_TOKEN);
 
 		if (requester === request.body.message.chat.id)
 			await tgReport(`intercept\n${typeof request.body}\n${JSON.stringify(request.body)}`, process.env.RIN_TG_TOKEN);
