@@ -1,18 +1,10 @@
 
 import * as RedisAccess from "./red.js"
-import { tg, tgReport, pickRandom, sleep } from "./utils.js";
+import { tg, tgReport, pickRandom, sleep, escapeMarkdown } from "./utils.js";
 import seedrandom from "seedrandom";
 
 function roll(threshold) {
 	return Math.random() < threshold;
-}
-
-function getCommand(message, commands) {
-	return commands.find(
-		com => com.triggers.some(
-			trig => message.includes(trig)
-		)
-	)?.command;
 }
 
 async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAppeal, dbGetter){
@@ -21,10 +13,18 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 	const msgOriginal = msg;
 	msg = msg.toLowerCase();
 
+	function getCommand(message, commands) {
+		return commands.find(
+			com => com.triggers.some(
+				trig => message.includes(trig)
+			)
+		);
+	}
+
 	if (autoAppeal || appeals.some(a => msg.startsWith(a))){
 		const command = getCommand(msg, prefs.appealedCommands);
 
-		switch (command) {
+		switch (command?.command) {
 			case ("ah"): {
 				const tgr = await tg("sendAudio", {
 					...tgCommons,
@@ -58,11 +58,33 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 					await tg("sendMessage", {
 						...tgOptions,
 						parse_mode: "MarkdownV2",
-						text: loader.replace("#", `*${name}*`)
+						text: escapeMarkdown(loader).replace("#", `*${name}*`)
 					}, rinToken);
 					await sleep(1000);
 				}
 
+				break;
+			}
+			case ("help"): {
+				const appealsHelp = prefs.appealsTemplate
+					.replace("#", `${prefs.appeals.join(", ")}`);
+				const apCommandsHelp = prefs.appealedCommands.map(c =>
+					prefs.commandHelpTemplate
+						.replace("#", `${c.command}`)
+						.replace("#", `${c.triggers.join(", ")}`)
+						.replace("#", `${c.description ?? "N/A"}`)
+				).join("\n\n");
+				const basicTriggers = prefs.basicCommands.map(c => c.triggers.join(", ")).join(", ");
+				const basicTriggersHelp = prefs.basicTemplate.replace("#", `${basicTriggers}`);
+				const help = `${appealsHelp}\n\n${apCommandsHelp}\n\n${basicTriggersHelp}`;
+
+				const tgOptions = {...tgCommons};
+				delete tgOptions.reply_to_message_id;
+				await tg("sendMessage", {
+					...tgOptions,
+					parse_mode: "MarkdownV2",
+					text: escapeMarkdown(help)
+				}, rinToken);
 				break;
 			}
 			default: {
@@ -75,7 +97,9 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 		}
 	} else {
 		const command = getCommand(msg, prefs.basicCommands);
-		switch (command) {
+		if (command?.chance && !roll(command.chance))
+			return;
+		switch (command?.command) {
 			case ("pezda"): {
 				const tgr = await tg("sendSticker", {
 					...tgCommons,
@@ -90,6 +114,8 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 export default async function handler(request, response) {
 	const localMode = request.query?.localmode;
 
+	if (request.body.message?.from?.id === request.body.message?.chat?.id)
+		await tgReport(`intercept\n${typeof request.body}\n${JSON.stringify(request.body)}`, process.env.RIN_TG_TOKEN);
 	if (!localMode && !request.body?.message?.text) {
 		response.status(200).send();
 		return;
@@ -114,7 +140,7 @@ export default async function handler(request, response) {
 		const tgCommons = {
 			chat_id: process.env.TG_T_ME,
 		};
-		await rinModel("рин повангуй", tgCommons, 0, false, prefs, true, dbGetter);
+		await rinModel("", tgCommons, 0, false, prefs, false, dbGetter);
 	} else {
 		const requester = request.body.message.from.id;
 		const masterSpeaking = prefs.masters.some(m => requester == m);
@@ -124,9 +150,6 @@ export default async function handler(request, response) {
 			reply_to_message_id: request.body.message.message_id
 		};
 		const autoAppeal = request.body.message?.reply_to_message?.from?.id == prefs.me;
-
-		if (requester === request.body.message.chat.id)
-			await tgReport(`intercept\n${typeof request.body}\n${JSON.stringify(request.body)}`, process.env.RIN_TG_TOKEN);
 	
 		await rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAppeal, dbGetter);
 	}
