@@ -15,13 +15,13 @@ function getCommand(message, commands) {
 	)?.command;
 }
 
-async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs){
+async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAppeal, dbGetter){
 	const rinToken = process.env.RIN_TG_TOKEN;
 	const appeals = prefs.appeals;
 	const msgOriginal = msg;
 	msg = msg.toLowerCase();
 
-	if (appeals.some(a => msg.startsWith(a))){
+	if (autoAppeal || appeals.some(a => msg.startsWith(a))){
 		const command = getCommand(msg, prefs.appealedCommands);
 
 		switch (command) {
@@ -33,9 +33,14 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs){
 				break;
 			}
 			case ("fortune"): {
+				const date = new Date().toLocaleDateString();
+				const srnd = seedrandom(`${requester}-${date}`);
+
+				const [fortunesRaw] = await dbGetter("fortunes");
+				const fortunes = JSON.parse(fortunesRaw);
 				const tgr = await tg("sendMessage", {
 					...tgCommons,
-					text: pickRandom(prefs.fortunes.bad),
+					text: pickRandom(fortunes, srnd()),
 				}, rinToken);
 				break;
 			}
@@ -99,7 +104,8 @@ export default async function handler(request, response) {
 		port: process.env.RIN_REDIS_PORT
 	};
 	
-	const [prefsRaw] = await RedisAccess.get("prefs", dbCreds);
+	const dbGetter = keys => RedisAccess.get(keys, dbCreds);
+	const [prefsRaw] = await dbGetter("prefs");
 	const prefs = JSON.parse(prefsRaw);
 
 	// const tgr = await tg("setWebhook", {
@@ -111,20 +117,21 @@ export default async function handler(request, response) {
 		const tgCommons = {
 			chat_id: process.env.TG_T_ME,
 		};
-		await rinModel("sample message", tgCommons, 0, false, prefs);
+		await rinModel("рин повангуй", tgCommons, 0, false, prefs, true, dbGetter);
 	} else {
-		const requester = request.body.message.from.id
+		const requester = request.body.message.from.id;
 		const masterSpeaking = prefs.masters.some(m => requester == m);
 		const msg = request.body.message.text.trim();
 		const tgCommons = {
 			chat_id: request.body.message.chat.id,
 			reply_to_message_id: request.body.message.message_id
 		};
+		const autoAppeal = request.body.message?.reply_to_message?.id === prefs.me;
 
 		if (requester === request.body.message.chat.id)
 			await tgReport(`intercept\n${typeof request.body}\n${JSON.stringify(request.body)}`, process.env.RIN_TG_TOKEN);
 	
-		await rinModel(msg, tgCommons, requester, masterSpeaking, prefs);
+		await rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAppeal, dbGetter);
 	}
 
 	response.status(200).send();
