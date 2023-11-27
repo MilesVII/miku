@@ -74,12 +74,9 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 			}
 		}
 	} else {
-		console.log(prefs.basicCommands);
 		const command = getCommand(msg, prefs.basicCommands);
-		console.log(command);
 		switch (command) {
 			case ("pezda"): {
-				if (msg.length > 4) break;
 				const tgr = await tg("sendSticker", {
 					...tgCommons,
 					sticker: pickRandom(prefs.pezdaStickers),
@@ -127,7 +124,6 @@ export default async function handler(request, response) {
 			reply_to_message_id: request.body.message.message_id
 		};
 		const autoAppeal = request.body.message?.reply_to_message?.from?.id == prefs.me;
-		await tgReport(`${request.body.message?.reply_to_message?.from?.id}\n${prefs.me}`, process.env.RIN_TG_TOKEN);
 
 		if (requester === request.body.message.chat.id)
 			await tgReport(`intercept\n${typeof request.body}\n${JSON.stringify(request.body)}`, process.env.RIN_TG_TOKEN);
