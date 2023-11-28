@@ -151,8 +151,9 @@ export async function sleep(ms){
 
 //https://github.com/edwmurph/escape-markdown/blob/master/index.js
 export function escapeMarkdown(raw){
-	const substitutions = {'*': '\\*','#': '\\#','(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;'};
-	return raw.replace(/[\*\(\)\[\]\+\-\\_`#<>]/g, m => substitutions[m]);
+	const substitutions = {'*': '\\*',/*'#': '\\#',*/'(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;', '.': '\\.'};
+
+	return raw.replace(/./g, m => substitutions[m] ?? m);
 }
 
 export function pickRandom(array, random = Math.random()) {

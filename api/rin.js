@@ -55,6 +55,7 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 				const tgOptions = {...tgCommons};
 				delete tgOptions.reply_to_message_id;
 				for (let loader of loaders) {
+					console.log(escapeMarkdown(loader));
 					await tg("sendMessage", {
 						...tgOptions,
 						parse_mode: "MarkdownV2",
@@ -140,7 +141,7 @@ export default async function handler(request, response) {
 		const tgCommons = {
 			chat_id: process.env.TG_T_ME,
 		};
-		await rinModel("", tgCommons, 0, false, prefs, false, dbGetter);
+		await rinModel("рин пидор", tgCommons, 0, false, prefs, false, dbGetter);
 	} else {
 		const requester = request.body.message.from.id;
 		const masterSpeaking = prefs.masters.some(m => requester == m);
