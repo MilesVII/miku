@@ -151,7 +151,7 @@ export async function sleep(ms){
 
 //https://github.com/edwmurph/escape-markdown/blob/master/index.js
 export function escapeMarkdown(raw){
-	const substitutions = {'*': '\\*',/*'#': '\\#',*/'(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;', '.': '\\.'};
+	const substitutions = {'*': '\\*','#': '\\#','(': '\\(',')': '\\)','[': '\\[',']': '\\]',_: '\\_','\\': '\\\\','+': '\\+','-': '\\-','`': '\\`','<': '&lt;','>': '&gt;','&': '&amp;', '.': '\\.'};
 
 	return raw.replace(/./g, m => substitutions[m] ?? m);
 }

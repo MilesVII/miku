@@ -59,7 +59,7 @@ async function rinModel(msg, tgCommons, requester, masterSpeaking, prefs, autoAp
 					await tg("sendMessage", {
 						...tgOptions,
 						parse_mode: "MarkdownV2",
-						text: escapeMarkdown(loader).replace("#", `*${name}*`)
+						text: escapeMarkdown(loader).replace("\\#", `*${name}*`)
 					}, rinToken);
 					await sleep(1000);
 				}
