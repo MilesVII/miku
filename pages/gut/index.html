@@ -1,0 +1,87 @@
+<html>
+	<head>
+		<style type="text/css">
+			* {
+				box-sizing: border-box;
+			}
+
+			html, body {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+				min-height: 100%;
+				font: normal 400 18px Consolas;
+				background-color: rgb(5, 5, 5);
+				color: black;
+			}
+
+			.list {
+				padding: 2em;
+				display: flex;
+				flex-flow: column nowrap;
+				gap: 1em;
+				width: 100%;
+				align-items: center;
+			}
+
+			.item {
+				background-color: rgb(250, 250, 250);
+				border-radius: .5em;
+				width: 80%;
+				padding: .5em;
+				
+				display: flex;
+				flex-flow: column nowrap;
+				gap: .5em;
+			}
+
+			.item > div {
+				cursor: pointer;
+				user-select: none;
+			}
+
+			.item-sent {
+				opacity: .32;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="list">
+		</div>
+		<script type="text/javascript">
+			let list = [];
+			function update(newlist){
+				list = newlist;
+				window.localStorage.setItem("list", JSON.stringify(newlist));
+				const listE = document.querySelector(".list");
+				listE.innerHTML = "";
+
+				for (let i of newlist){
+					const [source, content, sent] = i;
+
+					const e = document.createElement("div");
+					e.classList.add("item");
+					if (sent) e.classList.add("item-sent");
+					
+					const srcE = document.createElement("div");
+					srcE.textContent = source;
+					srcE.addEventListener("click", () => navigator.clipboard.writeText(source));
+
+					const cntE = document.createElement("div");
+					cntE.textContent = content;
+					cntE.addEventListener("click", () => navigator.clipboard.writeText(content));
+
+					e.addEventListener("dblclick", () => {
+						i[2] = true;
+						update(newlist);
+					});
+
+					e.appendChild(srcE);
+					e.appendChild(cntE);
+					listE.appendChild(e);
+				}
+			}
+			update(JSON.parse(window.localStorage.getItem("list") ?? "[]"));
+		</script>
+	</body>
+</html>
