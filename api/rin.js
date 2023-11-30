@@ -35,13 +35,13 @@ async function rinModel(msg, requester, replyTo, replyToMsg, dbGetter, dbSetter,
 		switch (command?.command) {
 			case ("draft_on"): {
 				prefs.draft = true;
-				await dbSetter("prefs", JSON.stringify(prefs));
+				await dbSetter("prefs", JSON.stringify(prefs, undefined, "\t"));
 				await say(pickRandom(command.responses));
 				break;
 			}
 			case ("draft_off"): {
 				prefs.draft = false;
-				await dbSetter("prefs", JSON.stringify(prefs));
+				await dbSetter("prefs", JSON.stringify(prefs, undefined, "\t"));
 				await say(pickRandom(command.responses));
 				break;
 			}
@@ -174,7 +174,7 @@ export default async function handler(request, response) {
 			{
 				chat_id: request.body.message.from.id,
 				parse_mode: "MarkdownV2",
-				text: `\`\`\`\n${escapeMarkdown(JSON.stringify(request.body))}\n\`\`\``
+				text: `\`\`\`\n${escapeMarkdown(JSON.stringify(request.body, undefined, "\t"))}\n\`\`\``
 			},
 			process.env.RIN_TG_TOKEN
 		);
