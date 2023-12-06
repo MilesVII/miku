@@ -70,11 +70,17 @@ async function rinModel(msg, requester, replyTo, replyToMsg, dbGetter, dbSetter,
 				const name = pickRandom(members, srnd());
 
 				for (let loader of loaders) {
-					await say(
-						escapeMarkdown(loader).replace("\\#", `*${name}*`),
-						false,
-						true
-					);
+					if (loader.startsWith(":"))
+						await say(
+							loader,
+							false
+						);
+					else
+						await say(
+							escapeMarkdown(loader).replace("\\#", `*${name}*`),
+							false,
+							true
+						);
 					await sleep(1000);
 				}
 
@@ -196,7 +202,6 @@ export default async function handler(request, response) {
 	// 	url: "https://mikumiku.vercel.app/api/rin",
 	// 	allowed_updates: "message"
 	// }, rinToken);
-
 
 	if (localMode){
 		const tgCommons = {
