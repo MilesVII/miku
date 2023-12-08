@@ -53,12 +53,15 @@ async function rinModel(msg, requester, replyTo, replyToMsg, dbGetter, dbSetter,
 				break;
 			}
 			case ("fortune"): {
+				const x2 = prefs.auxTriggers.double.some(t => msg.includes(t));
 				const date = new Date().toLocaleDateString();
 				const srnd = seedrandom(`${requester}-${date}`);
 
 				const [fortunesRaw] = await dbGetter("fortunes");
 				const fortunes = JSON.parse(fortunesRaw);
 				await say(pickRandom(fortunes, srnd()));
+				if (x2)
+					await say(pickRandom(fortunes, srnd()));
 				break;
 			}
 			case ("potd"): {
