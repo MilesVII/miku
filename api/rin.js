@@ -175,8 +175,16 @@ function say(commons, message, reply, markdown){
 }
 
 export default async function handler(request, response) {
-	const localMode = request.query?.localmode;
+	// Register webhook
+	// const tgr = await tg("setWebhook", {
+	// 	url: "https://mikumiku.vercel.app/api/rin",
+	// 	allowed_updates: "message"
+	// }, process.env.RIN_TG_TOKEN);
+	// response.status(200).send(tgr);
+	// return;
 
+	const localMode = request.query?.localmode;
+	console.log(JSON.stringify(request.body));
 	if (request.body.message?.chat?.type === "private")
 		await tg(
 			"sendMessage",
@@ -201,10 +209,6 @@ export default async function handler(request, response) {
 	const dbGetter = keys => RedisAccess.get(keys, dbCreds);
 	const dbSetter = (keys, value) => RedisAccess.set(keys, dbCreds, value);
 
-	// const tgr = await tg("setWebhook", {
-	// 	url: "https://mikumiku.vercel.app/api/rin",
-	// 	allowed_updates: "message"
-	// }, rinToken);
 
 	if (localMode){
 		const tgCommons = {
