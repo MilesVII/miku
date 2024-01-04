@@ -1,4 +1,4 @@
-import { tg, tgReport } from "../utils";
+import { tg, tgReport } from "../utils.js";
 
 export default async function handler(request, response) {
 	const message = request.body?.message;
