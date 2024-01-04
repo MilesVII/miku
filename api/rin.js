@@ -184,7 +184,7 @@ export default async function handler(request, response) {
 	// return;
 
 	const localMode = request.query?.localmode;
-	console.log(JSON.stringify(request.body));
+
 	if (request.body.message?.chat?.type === "private")
 		await tg(
 			"sendMessage",
@@ -208,7 +208,6 @@ export default async function handler(request, response) {
 	
 	const dbGetter = keys => RedisAccess.get(keys, dbCreds);
 	const dbSetter = (keys, value) => RedisAccess.set(keys, dbCreds, value);
-
 
 	if (localMode){
 		const tgCommons = {
