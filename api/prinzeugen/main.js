@@ -909,7 +909,7 @@ export default async function handler(request, response) {
 
 			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
 			const failFilter = idFilter ? "" : "&failed=eq.false";
-			const url = `/rest/v1/pool?approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token,additional)`;
+			const url = `/rest/v1/pool?order=id&approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token,additional)`;
 
 			let availablePosts = await db(url);
 			if (!availablePosts){
