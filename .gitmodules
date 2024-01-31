@@ -1,0 +1,3 @@
+[submodule "pages/spm"]
+	path = pages/spm
+	url = https://github.com/MilesVII/spm_web.git
