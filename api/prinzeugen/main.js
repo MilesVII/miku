@@ -5,11 +5,10 @@ import { validate, ARRAY_OF, OPTIONAL, DYNAMIC } from "arstotzka";
 const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
 const NINE_MB = 9 * 1024 * 1024;
 const PUB_FLAGS = {
-	ALLOW_IMG_ONLY: "imgonly",
+	//ALLOW_IMG_ONLY: "imgonly",
 	USE_PROXY: "useproxy",
-	NO_SIZE_LIMIT: "nosizelimit",
+	//NO_SIZE_LIMIT: "nosizelimit",
 	KEEP_AFTER_POST: "keep",
-	CUSTOM_BUTTONS: "custombuttons",
 	MARKDOWN_LINKS: "markdownlinks",
 	DOUBLE_TAP: "doubletap"
 };

@@ -1,0 +1,98 @@
+
+a {
+	text-decoration: none;
+	color: var(--color-accent);
+}
+
+button {
+	color: inherit;
+	background: none;
+	font: inherit;
+	outline: inherit;
+	cursor: pointer;
+	text-transform: lowercase;
+	
+	padding: var(--dims-padding);
+	border: var(--dims-line) solid var(--color-secondary);
+	border-radius: var(--dims-rounding);
+	transition: background-color var(--transition-time), border-color var(--transition-time);
+}
+button:hover {
+	background-color: var(--color-secondary);
+}
+button:focus {
+	border-color: var(--color-accent);
+}
+button:active {
+	background-color: var(--color-accent);
+}
+button:disabled {
+	color: var(--color-secondary);
+	cursor: not-allowed;
+}
+
+.field {
+	color: inherit;
+	background: none;
+	font: inherit;
+	outline: none;
+	width: 100%;
+
+	padding: var(--dims-padding);
+	border: var(--dims-line) solid var(--color-secondary);
+	border-radius: var(--dims-rounding);
+	transition: background-color var(--transition-time), border-color var(--transition-time);
+}
+.field:focus {
+	border-color: var(--color-accent);
+}
+.field:hover {
+	border-color: var(--color-accent);
+}
+.field:placeholder-shown {
+	color: var(--color-secondary);
+}
+textarea.field {
+	resize: vertical;
+}
+
+fieldset {
+	border: var(--dims-line) solid var(--color-secondary);
+	border-radius: var(--dims-rounding);
+	padding: var(--dims-padding);
+	transition: border-color var(--transition-time);
+}
+fieldset > legend {
+	color: var(--color-secondary);
+	transition: color var(--transition-time);
+}
+fieldset > .field {
+	padding: 0;
+	border: none;
+}
+fieldset:has(.field:focus) {
+	border-color: var(--color-accent);
+}
+fieldset:hover {
+	border-color: var(--color-accent);
+}
+fieldset:has(.field:focus) > legend {
+	color: var(--color-text);
+}
+fieldset:hover > legend {
+	color: var(--color-text);
+}
+
+dialog {
+	color: inherit;
+	font: inherit;
+	background: var(--color-base);
+	border: none;
+}
+dialog::backdrop {
+	backdrop-filter: blur(2px);
+	cursor: pointer;
+}
+dialog > form {
+	padding: var(--dims-padding);
+}

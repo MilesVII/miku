@@ -1,0 +1,9 @@
+.bordered {
+	border: var(--dims-line) solid var(--color-secondary);
+	border-radius: var(--dims-rounding);
+}
+
+.solid {
+	background-color: var(--color-secondary);
+	border-radius: var(--dims-rounding);
+}

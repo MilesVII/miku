@@ -1,0 +1,25 @@
+#statuslog {
+	margin-top: 1vw;
+	height: 42vw;
+	overflow-y: scroll;
+}
+
+#statuslog > div {
+	margin: .7vw;
+	padding: .5vw;
+	color: --shy;
+	cursor: default;
+	white-space: pre-line;
+
+	transition-property: opacity;
+	transition-duration: .7s;
+}
+
+#statuslog > div:hover {
+	opacity: 100% !important;
+}
+
+#statuslog :first-child {
+	background-color: darkred;
+	border-radius: .42vw;
+}

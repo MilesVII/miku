@@ -177,7 +177,7 @@ function say(commons, message, reply, markdown){
 export default async function handler(request, response) {
 	// Register webhook
 	// const tgr = await tg("setWebhook", {
-	// 	url: "https://mikumiku.vercel.app/api/rin",
+	// 	url: "https://mikumiku.vercel.app/api/rin/",
 	// 	allowed_updates: "message"
 	// }, process.env.RIN_TG_TOKEN);
 	// response.status(200).send(tgr);

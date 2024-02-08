@@ -1,0 +1,120 @@
+
+
+.tabbar {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: center;
+	width: 100%;
+	margin: 1vw 0 1vw 0;
+
+	border-style: solid;
+	border-width: 0;
+	border-bottom-width: .2vw;
+	border-color: var(--shy);
+}
+
+.tab {
+	border: 0 solid transparent;
+	border-bottom-width: var(--dims-line);
+	cursor: pointer;
+}
+.tab:hover {
+	border-color: var(--color-accent);
+}
+.tab.selected {
+	background-color: var(--color-accent);
+	border-color: var(--accent);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#login {
+	width: 100%;
+	height: 100vh;
+	padding: 0 25% 0 25%;
+	display: flex;
+	flex-flow: column wrap;
+	justify-content: center;
+	align-content: center;
+}
+
+#main {
+	width: 80%;
+	margin: auto;
+}
+
+
+.section {
+	background-color: rgba(0, 0, 0, .2);
+	border-radius: var(--small-round);
+}
+
+.approved {
+	background-color: hsla(100, 72%, 23%, .42);
+}
+
+.rejected {
+	background-color: hsla(0, 72%, 23%, .42);
+}
+
+.previewSection {
+	align-items: start;
+}
+
+.previewImage, .previewImageBig {
+	width: 50%;
+	border-radius: var(--small-round);
+	margin: var(--small-space);
+	display: flex;
+	justify-content: center;
+}
+
+.previewImageBig {
+	width: 85%;
+}
+
+.previewImage > img {
+	max-height: 52vh;
+}
+
+.poolMainPreview {
+	max-height: 52vh;
+}
+.poolPreviewContainer {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 3vw 2vh;
+}
+.poolPreviewItem {
+	display: flex;
+	width: 20vw;
+}
+.poolPreviewItem > img {
+	max-width: 20vw;
+	max-height: 24vw;
+	cursor: pointer;
+}
+
+.previewImageBig > img {
+	max-height: 24vh;
+}
+
+.hidden {
+	display: none !important;
+}
