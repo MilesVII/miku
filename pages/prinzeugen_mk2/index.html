@@ -44,6 +44,15 @@
 				<button>Cache</button>
 			</div>
 		</div>
+		<!-- Grabbers tab -->
+		<div class="container column inflated content-width hidden" data-tab-variant="grab" data-tab-variant-group="tabs">
+			<div class="container row unpad wrap center-contents wide">
+				<button id="grabbers-save">Save</button>
+				<div>Add:</div>
+				<button data-add-grabber="gelbooru">Gelbooru</button>
+			</div>
+			<div class="container column-reverse unpad stretch-contents wide" id="grabbers-list"></div>
+		</div>
 		<!-- Moderation tab -->
 		<div class="container column inflated content-width hidden" data-tab-variant="mode" data-tab-variant-group="tabs">
 			<div class="container row unpad wrap center-contents wide">
@@ -74,13 +83,35 @@
 		</div>
 	</template>
 
-	<body class="container column inflated" data-tab-container="state" data-tab-default="login">
+	<template id="generic-grabber">
+		<div class="container column bordered wide hoverable"></div>
+	</template>
+	<template id="generic-field-multiline">
+		<fieldset>
+			<legend class="container row unpad">
+				<label></label>
+				<span id="settings-flicker" class="solid"></span>
+			</legend>
+			<textarea class="field"></textarea>
+		</fieldset>
+	</template>
+	<template id="generic-field-line">
+		<fieldset>
+			<legend><label></label></legend>
+			<input type="text" class="field" />
+		</fieldset>
+	</template>
+	<template id="generic-grabber-buttons">
+		<div class="container row wrap unpad wide center-contents">
+			<button data-grabber-button="grab">Grab</button>
+			<button data-grabber-button="less">Grab less</button>
+			<button data-grabber-button="remv">Remove</button>
+		</div>
+	</template>
+
+	<body class="container column wide" data-tab-container="state" data-tab-default="login">
 		<!-- state contents -->
 	</body>
 
-	<script src="js/io.js"></script>
-	<script src="js/utils.js"></script>
-	<script src="js/tabs.js"></script>
-	<script src="js/grabbers.js"></script>
-	<script src="js/main.js"></script>
+	<script src="ts/index.js"></script>
 </html>

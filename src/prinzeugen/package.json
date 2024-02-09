@@ -1,0 +1,13 @@
+{
+  "name": "prinzeugen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "devDependencies": {
+    "esbuild": "0.20.0"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --sourcemap         --outfile=../../pages/prinzeugen_mk2/ts/index.js",
+    "watch": "esbuild src/main.ts --bundle --sourcemap --watch --outfile=../../pages/prinzeugen_mk2/ts/index.js"
+  }
+}

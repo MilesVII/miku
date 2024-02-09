@@ -20,6 +20,10 @@
 	flex-flow: column nowrap;
 }
 
+.column-reverse {
+	flex-flow: column-reverse nowrap;
+}
+
 .wrap {
 	flex-wrap: wrap;
 }
@@ -31,6 +35,11 @@
 
 .stretch-contents {
 	place-content: stretch;
+}
+
+.grid-2 {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 50% 50%);
 }
 
 .inflated {

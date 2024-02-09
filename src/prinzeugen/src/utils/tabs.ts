@@ -1,10 +1,11 @@
+import { fromTemplate } from "./utils";
 
-function switchTabContent(group, target, content){
-	const container = document.querySelector(`*[data-tab-container="${group}"]`);
+export function switchTabContent(group: string, target: string | null, content?: Node){
+	const container = document.querySelector<HTMLElement>(`*[data-tab-container="${group}"]`);
 	if (!container) {
 		if (!target) return;
 
-		const variants = document.querySelectorAll(`*[data-tab-variant-group="${group}"]`);
+		const variants = document.querySelectorAll<HTMLElement>(`*[data-tab-variant-group="${group}"]`);
 		if (variants.length === 0) return;
 
 		variants.forEach(v => {
@@ -26,11 +27,13 @@ function switchTabContent(group, target, content){
 	return storage;
 }
 
-function updateTabListeners(root = document){
-	const allTabs = root.querySelectorAll(".tab");
+export function updateTabListeners(root: (HTMLElement | Document) = document){
+	const allTabs = root.querySelectorAll<HTMLElement>(".tab");
 	allTabs.forEach(tab => {
 		const group = tab.dataset.tabGroup;
 		const tabId = tab.dataset.tabId;
+		if (group === undefined || tabId === undefined) return;
+
 		const sibs = root.querySelectorAll(`.tab[data-tab-group="${group}"]`);
 		tab.addEventListener("click", () => {
 			if (tab.classList.contains("selected")) return;
@@ -41,10 +44,12 @@ function updateTabListeners(root = document){
 		});
 	});
 
-	root.querySelectorAll("[data-tab-container]").forEach(container => {
+	root.querySelectorAll<HTMLElement>("[data-tab-container]").forEach(container => {
 		const tab = container.dataset.tabDefault;
 		if (tab) {
 			const group = container.dataset.tabContainer;
+			if (group === undefined) return;
+
 			switchTabContent(group, tab);
 		}
 	});

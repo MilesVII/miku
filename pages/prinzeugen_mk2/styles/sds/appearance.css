@@ -3,6 +3,13 @@
 	border-radius: var(--dims-rounding);
 }
 
+.hoverable {
+	transition: border-color var(--transition-time);
+}
+.hoverable:hover {
+	border-color: var(--color-accent)
+}
+
 .solid {
 	background-color: var(--color-secondary);
 	border-radius: var(--dims-rounding);
