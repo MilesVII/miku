@@ -7,7 +7,8 @@ import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { genericFlickerUpdate } from "./utils/flicker";
 import { init as initConsole, report } from "./utils/console";
 
-import { addGrabber, saveGrabbers, showGrabbers } from "./grabbing";
+import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing";
+import { decide, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
 
 const PLACEHOLDER_URL = "placeholder.png";
 
@@ -16,9 +17,9 @@ main();
 async function main(){
 	updateTabListeners();
 
-	// window.addEventListener("error", (event, source, lineno, colno, error) => {
-	// 	report(`${event.message}\n\n${source} ${lineno}:${colno}`);
-	// });
+	window.addEventListener("error", (event) => {
+		report(`${event.message}\n\n${event.filename} ${event.lineno}:${event.colno}`);
+	});
 	document.querySelector("#form-login")?.addEventListener("submit", e => login(e));
 
 	const loginData = load("login");
@@ -35,24 +36,24 @@ async function main(){
 			authorize(loginResponse.data);
 	}
 
-	// listenToKeyboard(false, [
-	// 	{
-	// 		keys: ["Comma"],
-	// 		action: () => decide(true)
-	// 	},
-	// 	{
-	// 		keys: ["Period"],
-	// 		action: () => decide(false)
-	// 	},
-	// 	{
-	// 		keys: ["Digit0"],
-	// 		action: () => upscalePreview()
-	// 	},
-	// 	{
-	// 		keys: ["ShiftRight", "KeyM"],
-	// 		action: () => fixFocus()
-	// 	}
-	// ]);
+	listenToKeyboard(false, [
+		{
+			keys: ["Comma"],
+			action: () => decide(true)
+		},
+		{
+			keys: ["Period"],
+			action: () => decide(false)
+		},
+		{
+			keys: ["Digit0"],
+			action: () => upscalePreviews()
+		},
+		{
+			keys: ["ShiftRight", "KeyM"],
+			action: () => fixFocus()
+		}
+	]);
 }
 
 async function authorize(userData: any){
@@ -74,16 +75,26 @@ async function authorize(userData: any){
 				addGrabber(b.dataset.addGrabber as GrabberType)
 			})
 		);
-	document
-		.querySelector<HTMLElement>("#grabbers-save")
-		?.addEventListener("click", () => saveGrabbers());
+
+	function addClick(query: string, action: () => void) {
+		document
+			.querySelector<HTMLElement>(query)
+			?.addEventListener("click", action);
+	}
+	addClick("#dashboard-grab", batchGrab);
+	addClick("#grabbers-save", saveGrabbers);
+	addClick("#moderables-reload", reloadModerables);
+	addClick("#moderables-upscale", upscalePreviews);
+	addClick("#moderables-submit", moderate);
+	addClick("#settings-save", saveSettings);
+	addClick("#settings-signout", signOut);
 
 	initConsole();
 
-	showGrabbers(userData.grabbers);
-	// loadModerables(userData.moderables);
+	displayGrabbers(userData.grabbers);
+	displayModerables(userData.moderables);
 
-	report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
+	report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);
 }
 
 async function login(e: Event){
@@ -148,142 +159,7 @@ async function login(e: Event){
 // 	pullCurtain(false);
 // }
 
-// async function reloadModerables(pullCurtains = true){
-// 	if (pullCurtains) pullCurtain(true);
-// 	const messages = await callAPI("getModerables", null, true);
-// 	loadModerables(messages.data);
-// 	if (pullCurtains) pullCurtain(false);
-// }
 
-// function loadModerables(messages){
-// 	const mod_list = document.querySelector("#mdr_list");
-// 	aiMode = load("login").id == 3;
-// 	mod_list.innerHTML = "";
-// 	messages.forEach(m => {
-// 		if (aiMode)
-// 			mod_list.appendChild(renderAiModerable(m.message, m.id));
-// 		else
-// 			mod_list.appendChild(renderModerable(m.message, m.id));
-// 	});
-// }
-
-// function renderModerable(message, id){
-// 	if (message.version != 3){
-// 		console.error("Unsupported message version");
-// 		return;
-// 	}
-// 	const proto = fromTemplate("moderation_item");
-// 	proto.dataset.id = id;
-// 	proto.dataset.original = message.content;
-// 	if (message.cached) proto.dataset.upscaled = "weewee";
-
-// 	const preview = message.cached ? message.cachedContent.preview : message.preview;
-// 	const source = message.links[0].url;
-
-// 	proto.querySelector("a").href = source;
-// 	proto.querySelector("img").src = preview;
-
-// 	const tagList = proto.querySelector(".row");
-// 	function renderTag(text, color){
-// 		const e = fromTemplate("moderation_tag");
-// 		e.textContent = text;
-// 		e.style.backgroundColor = color;
-// 		return e;
-// 	}
-// 	if (message.nsfw)
-// 		tagList.appendChild(renderTag("NSFW", "rgba(200, 0, 0, .3"));
-// 	if (message.tags?.includes("animated"))
-// 		tagList.appendChild(renderTag("animated", "rgba(50, 50, 200, .3"));
-// 	if (message.tags?.includes("animated_gif"))
-// 		tagList.appendChild(renderTag("GIF", "rgba(50, 50, 200, .3"));
-// 	if (message.tags?.includes("video"))
-// 		tagList.appendChild(renderTag("video", "rgba(50, 50, 200, .3"));
-// 	if (message.artists)
-// 		message.artists.forEach(artist => tagList.appendChild(renderTag(`🎨 ${artist}`, "rgba(250, 250, 250, .7")));
-
-// 	const buttons = proto.querySelectorAll(".button");
-// 	buttons[0].textContent = "Approve";
-// 	buttons[0].addEventListener("click", () => {
-// 		proto.classList.remove("rejected");
-// 		proto.classList.add("approved");
-// 	});
-// 	buttons[1].textContent = "Reject";
-// 	buttons[1].addEventListener("click", () => {
-// 		proto.classList.add("rejected");
-// 		proto.classList.remove("approved");
-// 	});
-
-// 	proto.addEventListener("focusin", e => proto.scrollIntoView({/*behavior: "smooth", */block: "center"}));
-// 	proto.addEventListener("mousedown", e => e.preventDefault());
-
-// 	return proto;
-// }
-
-// const UPSCALE_RETRY_COUNT = 3;
-// async function upscalePreview(){
-// 	async function upscale(e, retriesLeft = UPSCALE_RETRY_COUNT){
-// 		if (e.dataset.upscaled === "weewee" && retriesLeft === UPSCALE_RETRY_COUNT) return;
-// 		e.dataset.upscaled = "weewee";
-
-// 		const url = `/api/imgproxy?j=1&w=0&url=${e.dataset.original}`;
-// 		const response = await fetch(url);
-// 		if (response.status === 504) {
-// 			if (retriesLeft <= 0) return;
-// 			await sleep(Math.random() * 5000);
-// 			await upscale(e, retriesLeft - 1);
-// 			return;
-// 		}
-// 		if (!response.ok) return;
-// 		if (!response.headers.get("content-type").startsWith("image/")) return;
-// 		const data = await response.arrayBuffer();
-// 		const blob = new Blob([data]);
-// 		e.querySelector("img").src = URL.createObjectURL(blob);
-// 	}
-
-// 	const targets = Array.from(document.querySelectorAll(".previewSection"));
-// 	const chomnks = chunk(targets, 7);
-// 	for (const chonk of chomnks) {
-// 		const scaleJobs = chonk.map(e => upscale(e));
-// 		await Promise.allSettled(scaleJobs);
-// 		console.log("chonk done");
-// 	};
-// 	scalingLock = false;
-// }
-
-// function fixFocus(){
-// 	const previews =  Array.from(document.querySelectorAll(".previewSection"));
-// 	if (previews.length === 0) return;
-// 	const target = previews.find(p => !(p.classList.contains("approved") || p.classList.contains("rejected")));
-// 	if (target)
-// 		target.focus();
-// 	else
-// 		previews[0].focus();
-// }
-
-// function decide(approve){
-// 	const focused = document.activeElement;
-// 	if (!focused.classList.contains("previewSection")) return;
-// 	if (typeof approve == "boolean")
-// 		focused.querySelectorAll(".button")[approve ? 0 : 1].click();
-// 	else
-// 		focused.querySelectorAll(".button")[approve].click();
-
-// 	const nextSib = focused.nextElementSibling;
-// 	if (nextSib?.classList.contains("previewSection")) 
-// 		nextSib.focus();
-// 	else
-// 		document.querySelector("#moderateButton").scrollIntoView({behavior: "smooth", block: "center"});
-// }
-
-// async function moderate(){
-// 	if (decisions.length == 0) return;
-
-// 	pullCurtain(true);
-// 	const newModerables = await callAPI("moderate", {decisions: decisions}, true);
-	
-// 	loadModerables(newModerables.data);
-// 	pullCurtain(false);
-// }
 
 // function setPreviewPost(row){
 // 	const main = document.querySelector("#poolPostMain");
@@ -412,9 +288,9 @@ function updateSettingsFlicker(){
 }
 
 async function saveSettings(){
-	const newPassword = document.querySelector<HTMLInputElement>("#stg_access")?.value.trim() || null;
-	const tgToken = document.querySelector<HTMLInputElement>("#stg_tg")?.value || null;
-	const additionals = document.querySelector<HTMLTextAreaElement>("#stg_additional")?.value;
+	const newPassword = document.querySelector<HTMLInputElement>("#settings-password")?.value.trim() || null;
+	const tgToken = document.querySelector<HTMLInputElement>("#settings-tg-token")?.value || null;
+	const additionals = document.querySelector<HTMLTextAreaElement>("#settings-additional")?.value ?? "";
 
 	pullCurtain(true);
 	await callAPI("saveSettings", {
@@ -422,8 +298,8 @@ async function saveSettings(){
 		newTgToken: tgToken,
 		additionalData: additionals
 	}, true);
-	if (newPassword) signOut();
 	pullCurtain(false);
+	if (newPassword) signOut();
 }
 
 function signOut(){

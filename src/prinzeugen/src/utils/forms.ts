@@ -1,4 +1,5 @@
 import { fromTemplate } from "./utils";
+import { genericFlickerUpdate } from "./flicker";
 
 export type FieldType = "line" | "list";
 export type FieldSchema<T = Record<string, string>> = {
@@ -18,7 +19,8 @@ export function fieldSchema<T>(key: string, type: FieldType, additional: T): Fie
 
 export type PEFieldAdditionals = {
 	label: string,
-	placeholder?: string
+	placeholder?: string,
+	lineCount?: boolean
 };
 
 function fieldFromTemplate(field: FieldSchema<PEFieldAdditionals>){
@@ -68,6 +70,16 @@ function fieldFromTemplate(field: FieldSchema<PEFieldAdditionals>){
 			textarea.placeholder = field.additional.placeholder ?? "";
 			textarea.setAttribute(`data-grabber-form-${field.key}`, "");
 
+			if (field.additional.lineCount) {
+				const textareaFU = () => genericFlickerUpdate(
+					"textarea",
+					"legend > span",
+					(content) => ([`${content.split("\n").filter(line => line.trim().length > 0).length}`, undefined]),
+					proto
+				);
+				textarea.addEventListener("input", textareaFU);
+			}
+
 			return proto;
 		}
 	}
@@ -107,8 +119,10 @@ export function readForm(container: HTMLElement, schema: FormSchema<PEFieldAddit
 export function fillForm(form: HTMLElement, data: Record<string, string>) {
 	for (const key of Object.keys(data)){
 		const field = getFieldElement(form, key);
-		if (field)
+		if (field) {
 			(field as any).value = data[key];
+			field.dispatchEvent(new Event("input"));
+		}
 	}
 	return form;
 }

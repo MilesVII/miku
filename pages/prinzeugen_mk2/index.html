@@ -38,34 +38,39 @@
 			<div class="tab container" data-tab-group="tabs" data-tab-id="sets">Settings</div>
 		</nav>
 		<!-- Dashboard tab -->
-		<div class="container column inflated content-width" data-tab-variant="dash" data-tab-variant-group="tabs">
+		<div class="container column content-width wide" data-tab-variant="dash" data-tab-variant-group="tabs">
 			<div class="container row unpad wrap center-contents wide">
-				<button>Grab</button>
-				<button>Cache</button>
+				<button id="dashboard-grab">Grab</button>
+				<button disabled>Cache</button>
 			</div>
 		</div>
 		<!-- Grabbers tab -->
-		<div class="container column inflated content-width hidden" data-tab-variant="grab" data-tab-variant-group="tabs">
+		<div class="container column content-width wide hidden" data-tab-variant="grab" data-tab-variant-group="tabs">
 			<div class="container row unpad wrap center-contents wide">
 				<button id="grabbers-save">Save</button>
 				<div>Add:</div>
 				<button data-add-grabber="gelbooru">Gelbooru</button>
 			</div>
-			<div class="container column-reverse unpad stretch-contents wide" id="grabbers-list"></div>
+			<div class="container column-reverse unpad stretch-contents wide" id="grabbers-list">
+				<!-- grabbers -->
+			</div>
 		</div>
 		<!-- Moderation tab -->
-		<div class="container column inflated content-width hidden" data-tab-variant="mode" data-tab-variant-group="tabs">
+		<div class="container column content-width wide hidden" data-tab-variant="mode" data-tab-variant-group="tabs">
 			<div class="container row unpad wrap center-contents wide">
-				<button>Reload</button>
-				<button>Upscale</button>
-				<button>Submit</button>
+				<button id="moderables-reload">Reload</button>
+				<button id="moderables-upscale">Upscale</button>
+				<button id="moderables-submit">Submit</button>
+			</div>
+			<div class="container unpad column wide" id="moderables-list">
+				<!-- moderables -->
 			</div>
 		</div>
 		<!-- Settings tab -->
-		<div class="container column inflated content-width hidden" data-tab-variant="sets" data-tab-variant-group="tabs">
+		<div class="container column content-width wide hidden" data-tab-variant="sets" data-tab-variant-group="tabs">
 			<fieldset>
 				<legend><label for="settings-password">Password</label></legend>
-				<input type="text" id="settings-password" class="field" />
+				<input type="text" id="settings-password" class="field" placeholder="Keep empty to keep old password" />
 			</fieldset>
 			<fieldset>
 				<legend><label for="settings-tg-token">Telegram bot token</label></legend>
@@ -74,12 +79,12 @@
 			<fieldset>
 				<legend class="container row unpad">
 					<label for="settings-additional">Additional data</label>
-					<span id="settings-flicker" class="solid"></span>
+					<span id="settings-flicker" class="rounded"></span>
 				</legend>
-				<textarea id="settings-additional" class="field"></textarea>
+				<textarea id="settings-additional" class="field" rows="12"></textarea>
 			</fieldset>
-			<button>Save</button>
-			<button>Sign out</button>
+			<button id="settings-save">Save</button>
+			<button id="settings-signout">Sign out</button>
 		</div>
 	</template>
 
@@ -96,7 +101,7 @@
 		<fieldset>
 			<legend class="container row unpad">
 				<label></label>
-				<span id="settings-flicker" class="solid"></span>
+				<span></span>
 			</legend>
 			<textarea class="field"></textarea>
 		</fieldset>
@@ -107,13 +112,23 @@
 			<input type="text" class="field" />
 		</fieldset>
 	</template>
+	<template id="generic-moderable">
+		<div class="moderable container column bordered wide hoverable" tabindex="0">
+			<a class="rounded levitating" tabindex="-1" target="_blank"><img class="rounded" src="placeholder.png" /></a>
+			<div class="container unpad row wrap wide center-contents moderable-info"></div>
+			<div class="container unpad row wrap wide center-contents">
+				<button tabindex="-1" data-moderable-button="approve">Approve</button>
+				<button tabindex="-1" data-moderable-button="reject">Reject</button>
+			</div>
+		</div>
+	</template>
 
 	<body class="wide">
 		<div class="container column inflated" data-tab-container="state" data-tab-default="login">
 			<!-- State Contents -->
 		</div>
 		<!-- Log -->
-		<details class="float-bl console">
+		<details class="float-bl console" open >
 			<summary class="glass">Console</summary>
 			<div class="container column-reverse bordered hoverable glass"></div>
 		</details>

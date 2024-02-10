@@ -1,5 +1,5 @@
 
-export async function callAPI(action: string, data: Record<string, any>, useLogin = true){
+export async function callAPI(action: string, data: Record<string, any> | null, useLogin = true){
 	function safeParse(str: string){
 		return safe(() => JSON.parse(str));
 	}

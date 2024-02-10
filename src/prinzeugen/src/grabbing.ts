@@ -5,6 +5,7 @@ import { listenToKeyboard } from "./utils/io";
 import { updateTabListeners, switchTabContent } from "./utils/tabs";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { report } from "./utils/console";
+import { downloadModerables, displayModerables } from "./moderation";
 
 import * as forms from "./utils/forms";
 
@@ -16,7 +17,7 @@ export async function downloadGrabbers(): Promise<any[] | null> {
 		return null;
 }
 
-export function showGrabbers(grabs: any[]){
+export function displayGrabbers(grabs: any[]){
 	const list = document.querySelector<HTMLElement>("#grabbers-list");
 	if (!list) return;
 	list.innerHTML = "";
@@ -32,7 +33,7 @@ export function showGrabbers(grabs: any[]){
 	});
 }
 
-export async function manualGrab(){
+export async function batchGrab(){
 	pullCurtain(true);
 	const grabbersReference = await downloadGrabbers();
 	if (!grabbersReference) {
@@ -47,17 +48,11 @@ export async function manualGrab(){
 			report(`Grab #${i} failed`);
 			console.error(response);
 		} else
-			newRows = newRows.concat(response.data);
+			newRows.push(...response.data);
 	}
 	report(`${newRows.length} new entries`);
 
-	updateCurtainMessage(`Updating state`);
-	const updateGrabbers = await downloadGrabbers();
-	// await reloadModerables(false);
-
-	pullCurtain(false);
-	
-	if (updateGrabbers) showGrabbers(updateGrabbers);
+	afterGrab();
 }
 
 export async function selectiveGrab(grabberId: number, batchSize?: number){
@@ -75,17 +70,22 @@ export async function selectiveGrab(grabberId: number, batchSize?: number){
 		report(`Grab #${grabberId} failed`);
 		console.error(response);
 	} else
-		newRows.push(response.data);
+		newRows.push(...response.data);
 	
 	report(`${newRows.length} new entries`);
 
+	afterGrab();
+}
+
+async function afterGrab(){
 	updateCurtainMessage(`Updating state`);
 	const updateGrabbers = await downloadGrabbers();
-	// await reloadModerables(false);
+	const updateModerables = await downloadModerables();
 
 	pullCurtain(false);
 
-	if (updateGrabbers) showGrabbers(updateGrabbers);
+	if (updateGrabbers) displayGrabbers(updateGrabbers);
+	if (updateModerables) displayModerables(updateModerables);
 }
 
 export async function saveGrabbers(){
@@ -93,8 +93,6 @@ export async function saveGrabbers(){
 	const grabs = Array.from(list?.children ?? [])
 		.map(el => {
 			const container = el as HTMLElement;
-			console.log(container);
-			console.log(container?.dataset.grabberForm);
 			return Grabbers[container?.dataset.grabberForm as GrabberType].read(container)
 		});
 	
@@ -106,7 +104,7 @@ export async function saveGrabbers(){
 
 	const updateGrabbers = response.status === 200 ? await downloadGrabbers() : null;
 	pullCurtain(false);
-	if (updateGrabbers) showGrabbers(updateGrabbers);
+	if (updateGrabbers) displayGrabbers(updateGrabbers);
 }
 
 export function addGrabber(type: GrabberType){

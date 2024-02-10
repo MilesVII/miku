@@ -3,6 +3,10 @@
 	border-radius: var(--dims-rounding);
 }
 
+.rounded {
+	border-radius: var(--dims-rounding);
+}
+
 .hoverable {
 	transition: border-color var(--transition-time);
 }

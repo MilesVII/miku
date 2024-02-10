@@ -43,6 +43,8 @@
 
 	--transition-time: .21s;
 	--dims-blur: 2px;
+	--dims-glow: var(--dims-spacing);
+	--effect-glow: 0 0 var(--dims-glow) var(--color-accent);
 	
 	background-color: var(--color-base);
 

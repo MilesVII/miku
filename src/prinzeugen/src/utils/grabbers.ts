@@ -22,14 +22,17 @@ export const GLB_FORM: forms.FormSchema<forms.PEFieldAdditionals> = [
 		label: "Gelbooru API key"
 	}),
 	forms.fieldSchema<forms.PEFieldAdditionals>("tags", "list", {
-		label: "Tags"
+		label: "Tags",
+		lineCount: true
 	}),
 	forms.fieldSchema<forms.PEFieldAdditionals>("whitelist", "list", {
 		label: "Whitelist",
-		placeholder: "sort:id:asc and id:>lastseen are added autmoatically"
+		placeholder: "sort:id:asc and id:>lastseen are added autmoatically",
+		lineCount: true
 	}),
 	forms.fieldSchema<forms.PEFieldAdditionals>("blacklist", "list", {
-		label: "Blacklist"
+		label: "Blacklist",
+		lineCount: true
 	}),
 	forms.fieldSchema<forms.PEFieldAdditionals>("lastSeen", "line", {
 		label: "Last checked post ID"

@@ -32,6 +32,13 @@
       data: payload
     };
   }
+  function chunk(a, chunksize) {
+    let r = [];
+    for (let i = 0; i < a.length; i += chunksize) {
+      r.push(a.slice(i, i + chunksize));
+    }
+    return r;
+  }
   function fromTemplate(id) {
     return document.querySelector(`template#${id}`)?.content.cloneNode(true) ?? null;
   }
@@ -41,6 +48,9 @@
     } catch (e) {
       return null;
     }
+  }
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
   function setElementValue(query, value, propertyName = "value") {
     const e = document.querySelector(query);
@@ -56,6 +66,18 @@
       localStorage.setItem(key, JSON.stringify(data));
     else
       localStorage.removeItem(key);
+  }
+
+  // src/utils/io.ts
+  function listenToKeyboard(preventDefault, mappings) {
+    document.addEventListener("keydown", (e) => {
+      const mapping = mappings.find((m) => m.keys.includes(e.code));
+      if (mapping) {
+        if (preventDefault)
+          e.preventDefault();
+        mapping.action();
+      }
+    });
   }
 
   // src/utils/tabs.ts
@@ -144,7 +166,7 @@
     if (!flicker)
       return;
     const contents = textarea?.value.trim() ?? "";
-    const [text, color = "hsla(0, 0%, 60%, .42)"] = cb(contents);
+    const [text, color = "transparent"] = cb(contents);
     flicker.textContent = text;
     flicker.style.backgroundColor = color;
   }
@@ -225,6 +247,15 @@
         }
         textarea.placeholder = field.additional.placeholder ?? "";
         textarea.setAttribute(`data-grabber-form-${field.key}`, "");
+        if (field.additional.lineCount) {
+          const textareaFU = () => genericFlickerUpdate(
+            "textarea",
+            "legend > span",
+            (content) => [`${content.split("\n").filter((line) => line.trim().length > 0).length}`, void 0],
+            proto
+          );
+          textarea.addEventListener("input", textareaFU);
+        }
         return proto;
       }
     }
@@ -255,8 +286,10 @@
   function fillForm(form, data) {
     for (const key of Object.keys(data)) {
       const field = getFieldElement(form, key);
-      if (field)
+      if (field) {
         field.value = data[key];
+        field.dispatchEvent(new Event("input"));
+      }
     }
     return form;
   }
@@ -273,14 +306,17 @@
       label: "Gelbooru API key"
     }),
     fieldSchema("tags", "list", {
-      label: "Tags"
+      label: "Tags",
+      lineCount: true
     }),
     fieldSchema("whitelist", "list", {
       label: "Whitelist",
-      placeholder: "sort:id:asc and id:>lastseen are added autmoatically"
+      placeholder: "sort:id:asc and id:>lastseen are added autmoatically",
+      lineCount: true
     }),
     fieldSchema("blacklist", "list", {
-      label: "Blacklist"
+      label: "Blacklist",
+      lineCount: true
     }),
     fieldSchema("lastSeen", "line", {
       label: "Last checked post ID"
@@ -325,6 +361,163 @@
     "gelbooru": GelbooruGrabber
   };
 
+  // src/moderation.ts
+  async function downloadModerables() {
+    const messages = await callAPI("getModerables", null, true);
+    if (messages.status == 200)
+      return messages.data;
+    else
+      return null;
+  }
+  async function reloadModerables() {
+    pullCurtain(true);
+    const messages = await downloadModerables();
+    pullCurtain(false);
+    if (messages)
+      displayModerables(messages);
+  }
+  function displayModerables(messages) {
+    const list = document.querySelector("#moderables-list");
+    if (!list)
+      return;
+    list.innerHTML = "";
+    messages.forEach((m) => {
+      const item = renderModerable(m.message, m.id);
+      if (item)
+        list.append(item);
+    });
+  }
+  function renderModerable(message, id) {
+    if (message.version != 3) {
+      console.error("Unsupported message version");
+      return;
+    }
+    const proto = fromTemplate("generic-moderable")?.firstElementChild;
+    if (!proto)
+      return;
+    proto.dataset.id = id;
+    proto.dataset.original = message.content;
+    if (message.cached)
+      proto.dataset.upscaled = "weewee";
+    proto.addEventListener("click", () => proto.focus());
+    const preview = message.cached ? message.cachedContent.preview : message.preview;
+    const source = message.links[0].url;
+    const link = proto.querySelector("a");
+    if (link)
+      link.href = source;
+    const image = proto.querySelector("img");
+    if (image)
+      image.src = preview;
+    function renderTag(text, color) {
+      const e = document.createElement("div");
+      e.className = "rounded bordered padded";
+      e.textContent = text;
+      e.style.backgroundColor = color;
+      return e;
+    }
+    const tags = proto.querySelector(".moderable-info");
+    if (tags) {
+      if (message.artists)
+        message.artists.forEach(
+          (artist) => tags.append(renderTag(`\u{1F3A8} ${artist}`, "transparent"))
+        );
+      if (message.nsfw)
+        tags.append(renderTag("NSFW", "rgba(200, 0, 0, .3"));
+      if (message.tags?.includes("animated"))
+        tags.append(renderTag("animated", "rgba(50, 50, 200, .3"));
+      if (message.tags?.includes("animated_gif"))
+        tags.append(renderTag("GIF", "rgba(50, 50, 200, .3"));
+      if (message.tags?.includes("video"))
+        tags.append(renderTag("video", "rgba(50, 50, 200, .3"));
+    }
+    proto.querySelectorAll("[data-moderable-button]").forEach((b) => {
+      if (b.dataset.moderableButton === "approve") {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          proto.classList.remove("rejected");
+          proto.classList.add("approved");
+        });
+      } else {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          proto.classList.add("rejected");
+          proto.classList.remove("approved");
+        });
+      }
+    });
+    proto.addEventListener("focusin", () => proto.scrollIntoView({
+      /*behavior: "smooth", */
+      block: "center"
+    }));
+    proto.addEventListener("mousedown", (e) => e.preventDefault());
+    return proto;
+  }
+  var UPSCALE_RETRY_COUNT = 3;
+  async function upscalePreviews() {
+    async function upscale(e, retriesLeft = UPSCALE_RETRY_COUNT) {
+      if (e.dataset.upscaled && retriesLeft === UPSCALE_RETRY_COUNT)
+        return;
+      e.dataset.upscaled = "weewee";
+      const url = `/api/imgproxy/?j=1&w=0&url=${e.dataset.original}`;
+      const response = await fetch(url);
+      if (response.status === 504) {
+        if (retriesLeft <= 0)
+          return;
+        await sleep(Math.random() * 5e3);
+        await upscale(e, retriesLeft - 1);
+        return;
+      }
+      if (!response.ok)
+        return;
+      if (!response.headers.get("content-type")?.startsWith("image/"))
+        return;
+      const data = await response.arrayBuffer();
+      const blob = new Blob([data]);
+      const image = e.querySelector("img");
+      if (image)
+        image.src = URL.createObjectURL(blob);
+    }
+    const moderables = Array.from(document.querySelectorAll(".moderable"));
+    const chomnks = chunk(moderables, 7);
+    for (const chonk of chomnks) {
+      const scaleJobs = chonk.map((e) => upscale(e));
+      await Promise.allSettled(scaleJobs);
+    }
+    ;
+  }
+  function fixFocus() {
+    const target = document.querySelector(".moderable:not(.approved):not(.rejected)");
+    if (target)
+      target.focus();
+    else
+      document.querySelector(".moderable")?.focus();
+  }
+  function decide(approve) {
+    const focused = document.activeElement;
+    if (!focused?.classList.contains("moderable"))
+      return;
+    const buttonQuery = `button[data-moderable-button="${approve ? "approve" : "reject"}"]`;
+    focused.querySelector(buttonQuery)?.click();
+    const nextSib = focused.nextElementSibling;
+    if (nextSib?.classList.contains("moderable"))
+      nextSib.focus();
+    else
+      document.querySelector("#moderables-submit")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  async function moderate() {
+    const decisionsCards = document.querySelectorAll(".moderable.approved, .moderable.rejected");
+    const decisions = Array.from(decisionsCards).map((d) => ({
+      id: parseInt(d.dataset.id ?? "", 10),
+      approved: d.classList.contains("approved")
+    }));
+    if (decisions.length == 0)
+      return;
+    pullCurtain(true);
+    const newModerables = await callAPI("moderate", { decisions }, true);
+    pullCurtain(false);
+    displayModerables(newModerables.data);
+  }
+
   // src/grabbing.ts
   async function downloadGrabbers() {
     const grabbers = await callAPI("getGrabbers", {}, true);
@@ -333,7 +526,7 @@
     else
       return null;
   }
-  function showGrabbers(grabs) {
+  function displayGrabbers(grabs) {
     const list = document.querySelector("#grabbers-list");
     if (!list)
       return;
@@ -346,6 +539,26 @@
       meta.fill(proto, g);
       list.appendChild(proto);
     });
+  }
+  async function batchGrab() {
+    pullCurtain(true);
+    const grabbersReference = await downloadGrabbers();
+    if (!grabbersReference) {
+      pullCurtain(false);
+      return;
+    }
+    let newRows = [];
+    for (let i = 0; i < grabbersReference.length; ++i) {
+      updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
+      const response = await callAPI("grab", { id: i }, true);
+      if (response.status != 200) {
+        report(`Grab #${i} failed`);
+        console.error(response);
+      } else
+        newRows.push(...response.data);
+    }
+    report(`${newRows.length} new entries`);
+    afterGrab();
   }
   async function selectiveGrab(grabberId, batchSize) {
     pullCurtain(true);
@@ -360,20 +573,24 @@
       report(`Grab #${grabberId} failed`);
       console.error(response);
     } else
-      newRows.push(response.data);
+      newRows.push(...response.data);
     report(`${newRows.length} new entries`);
+    afterGrab();
+  }
+  async function afterGrab() {
     updateCurtainMessage(`Updating state`);
     const updateGrabbers = await downloadGrabbers();
+    const updateModerables = await downloadModerables();
     pullCurtain(false);
     if (updateGrabbers)
-      showGrabbers(updateGrabbers);
+      displayGrabbers(updateGrabbers);
+    if (updateModerables)
+      displayModerables(updateModerables);
   }
   async function saveGrabbers() {
     const list = document.querySelector("#grabbers-list");
     const grabs = Array.from(list?.children ?? []).map((el) => {
       const container = el;
-      console.log(container);
-      console.log(container?.dataset.grabberForm);
       return Grabbers[container?.dataset.grabberForm].read(container);
     });
     pullCurtain(true);
@@ -383,7 +600,7 @@
     const updateGrabbers = response.status === 200 ? await downloadGrabbers() : null;
     pullCurtain(false);
     if (updateGrabbers)
-      showGrabbers(updateGrabbers);
+      displayGrabbers(updateGrabbers);
   }
   function addGrabber(type) {
     const list = document.querySelector("#grabbers-list");
@@ -433,6 +650,11 @@
   main();
   async function main() {
     updateTabListeners();
+    window.addEventListener("error", (event) => {
+      report(`${event.message}
+
+${event.filename} ${event.lineno}:${event.colno}`);
+    });
     document.querySelector("#form-login")?.addEventListener("submit", (e) => login(e));
     const loginData = load("login");
     if (loginData != null) {
@@ -445,6 +667,24 @@
       if (loginResponse.status == 200)
         authorize(loginResponse.data);
     }
+    listenToKeyboard(false, [
+      {
+        keys: ["Comma"],
+        action: () => decide(true)
+      },
+      {
+        keys: ["Period"],
+        action: () => decide(false)
+      },
+      {
+        keys: ["Digit0"],
+        action: () => upscalePreviews()
+      },
+      {
+        keys: ["ShiftRight", "KeyM"],
+        action: () => fixFocus()
+      }
+    ]);
   }
   async function authorize(userData) {
     switchTabContent("state", "online");
@@ -460,9 +700,19 @@
         addGrabber(b.dataset.addGrabber);
       })
     );
-    document.querySelector("#grabbers-save")?.addEventListener("click", () => saveGrabbers());
+    function addClick(query, action) {
+      document.querySelector(query)?.addEventListener("click", action);
+    }
+    addClick("#dashboard-grab", batchGrab);
+    addClick("#grabbers-save", saveGrabbers);
+    addClick("#moderables-reload", reloadModerables);
+    addClick("#moderables-upscale", upscalePreviews);
+    addClick("#moderables-submit", moderate);
+    addClick("#settings-save", saveSettings);
+    addClick("#settings-signout", signOut);
     init();
-    showGrabbers(userData.grabbers);
+    displayGrabbers(userData.grabbers);
+    displayModerables(userData.moderables);
     report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);
   }
   async function login(e) {
@@ -505,6 +755,24 @@
         }
       }
     );
+  }
+  async function saveSettings() {
+    const newPassword = document.querySelector("#settings-password")?.value.trim() || null;
+    const tgToken = document.querySelector("#settings-tg-token")?.value || null;
+    const additionals = document.querySelector("#settings-additional")?.value ?? "";
+    pullCurtain(true);
+    await callAPI("saveSettings", {
+      newUserToken: newPassword,
+      newTgToken: tgToken,
+      additionalData: additionals
+    }, true);
+    pullCurtain(false);
+    if (newPassword)
+      signOut();
+  }
+  function signOut() {
+    save("login", null);
+    switchTabContent("state", "login");
   }
 })();
 //# sourceMappingURL=index.js.map

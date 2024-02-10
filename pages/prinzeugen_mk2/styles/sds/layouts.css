@@ -1,3 +1,7 @@
+.padded {
+	padding: var(--dims-padding);
+}
+
 .container {
 	display: flex;
 	gap: var(--dims-spacing);

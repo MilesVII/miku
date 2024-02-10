@@ -42,6 +42,7 @@
 .console[open] > div {
 	max-height: var(--dims-popup-height);
 	color: var(--color-secondary);
+	overflow: auto;
 }
 .console[open] > div > div:hover {
 	color: var(--color-text);
@@ -50,8 +51,25 @@
 	color: var(--color-accent);
 }
 
-
-
+.moderable img {
+	max-height: 50vh;
+	max-width: 100%;
+	object-fit: contain;
+}
+.moderable.approved {
+	background-color: hsla(100, 72%, 23%, .42);
+}
+.moderable.rejected {
+	background-color: hsla(0, 72%, 23%, .42);
+}
+.moderable {
+	transition: box-shadow var(--transition-time), border-color var(--transition-time);
+}
+.moderable:focus {
+	border-color: var(--color-accent);
+	box-shadow: var(--effect-glow);
+	outline: none;
+}
 
 
 
@@ -63,24 +81,12 @@
 
 
 /* 
-.approved {
-	background-color: hsla(100, 72%, 23%, .42);
-}
-
-.rejected {
-	background-color: hsla(0, 72%, 23%, .42);
-}
 
 .previewSection {
 	align-items: start;
 }
 
 .previewImage, .previewImageBig {
-	width: 50%;
-	border-radius: var(--small-round);
-	margin: var(--small-space);
-	display: flex;
-	justify-content: center;
 }
 
 .previewImageBig {
