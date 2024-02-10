@@ -7,7 +7,7 @@
     "esbuild": "0.20.0"
   },
   "scripts": {
-    "build": "esbuild src/main.ts --bundle --sourcemap         --outfile=../../pages/prinzeugen_mk2/ts/index.js",
-    "watch": "esbuild src/main.ts --bundle --sourcemap --watch --outfile=../../pages/prinzeugen_mk2/ts/index.js"
+    "build": "esbuild src/main.ts --bundle --sourcemap         --outfile=../../pages/prinzeugen/ts/index.js",
+    "watch": "esbuild src/main.ts --bundle --sourcemap --watch --outfile=../../pages/prinzeugen/ts/index.js"
   }
 }
