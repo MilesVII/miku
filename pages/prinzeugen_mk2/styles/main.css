@@ -23,7 +23,31 @@
 }
 .tab.selected {
 	background-color: var(--color-accent);
-	border-color: var(--accent);
+	border-color: var(--color-accent);
+}
+
+.console > summary {
+	cursor: pointer;
+	color: var(--color-accent);
+	width: fit-content;
+	border-radius: var(--dims-rounding);
+	padding: var(--dims-padding);
+}
+.console[data-unread="0"] > summary {
+	color: inherit;
+}
+.console {
+	width: calc(var(--dims-popup-width) - var(--dims-spacing) * 2);
+}
+.console[open] > div {
+	max-height: var(--dims-popup-height);
+	color: var(--color-secondary);
+}
+.console[open] > div > div:hover {
+	color: var(--color-text);
+}
+.console > div > div:first-child {
+	color: var(--color-accent);
 }
 
 
@@ -38,10 +62,7 @@
 
 
 
-
-
-
-
+/* 
 .approved {
 	background-color: hsla(100, 72%, 23%, .42);
 }
@@ -96,4 +117,4 @@
 
 .hidden {
 	display: none !important;
-}
+} */

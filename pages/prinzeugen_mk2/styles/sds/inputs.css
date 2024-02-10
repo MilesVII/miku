@@ -90,7 +90,7 @@ dialog {
 	border: none;
 }
 dialog::backdrop {
-	backdrop-filter: blur(2px);
+	backdrop-filter: blur(var(--dims-blur));
 	cursor: pointer;
 }
 dialog > form {

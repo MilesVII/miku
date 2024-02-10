@@ -26,7 +26,7 @@ export async function callAPI(action: string, data: Record<string, any>, useLogi
 	const raw = await response.text();
 	const payload = safeParse(raw) || raw;
 
-	//TODO if (response.status != 200) report(raw);
+	if (response.status != 200) console.error(raw);
 
 	return {
 		status: response.status,

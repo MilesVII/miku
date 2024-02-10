@@ -5,6 +5,7 @@ import { listenToKeyboard } from "./utils/io";
 import { updateTabListeners, switchTabContent } from "./utils/tabs";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { genericFlickerUpdate } from "./utils/flicker";
+import { init as initConsole, report } from "./utils/console";
 
 import { addGrabber, saveGrabbers, showGrabbers } from "./grabbing";
 
@@ -77,11 +78,12 @@ async function authorize(userData: any){
 		.querySelector<HTMLElement>("#grabbers-save")
 		?.addEventListener("click", () => saveGrabbers());
 
+	initConsole();
 
 	showGrabbers(userData.grabbers);
 	// loadModerables(userData.moderables);
 
-	// report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
+	report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`)
 }
 
 async function login(e: Event){

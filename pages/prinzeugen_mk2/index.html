@@ -84,7 +84,13 @@
 	</template>
 
 	<template id="generic-grabber">
-		<div class="container column bordered wide hoverable"></div>
+		<div class="container column bordered wide hoverable">
+			<div class="container row wrap unpad wide center-contents">
+				<button data-grabber-button="grab">Grab</button>
+				<button data-grabber-button="less">Grab less</button>
+				<button data-grabber-button="remv">Remove</button>
+			</div>
+		</div>
 	</template>
 	<template id="generic-field-multiline">
 		<fieldset>
@@ -101,16 +107,16 @@
 			<input type="text" class="field" />
 		</fieldset>
 	</template>
-	<template id="generic-grabber-buttons">
-		<div class="container row wrap unpad wide center-contents">
-			<button data-grabber-button="grab">Grab</button>
-			<button data-grabber-button="less">Grab less</button>
-			<button data-grabber-button="remv">Remove</button>
-		</div>
-	</template>
 
-	<body class="container column wide" data-tab-container="state" data-tab-default="login">
-		<!-- state contents -->
+	<body class="wide">
+		<div class="container column inflated" data-tab-container="state" data-tab-default="login">
+			<!-- State Contents -->
+		</div>
+		<!-- Log -->
+		<details class="float-bl console">
+			<summary class="glass">Console</summary>
+			<div class="container column-reverse bordered hoverable glass"></div>
+		</details>
 	</body>
 
 	<script src="ts/index.js"></script>

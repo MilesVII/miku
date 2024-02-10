@@ -24,6 +24,8 @@
     });
     const raw = await response.text();
     const payload = safeParse(raw) || raw;
+    if (response.status != 200)
+      console.error(raw);
     return {
       status: response.status,
       headers: response.headers,
@@ -145,6 +147,29 @@
     const [text, color = "hsla(0, 0%, 60%, .42)"] = cb(contents);
     flicker.textContent = text;
     flicker.style.backgroundColor = color;
+  }
+
+  // src/utils/console.ts
+  function init() {
+    const console2 = document.querySelector(".console");
+    if (!console2)
+      return;
+    console2.addEventListener("toggle", () => console2.dataset.unread = "0");
+  }
+  function report(message) {
+    const console2 = document.querySelector("details.console");
+    if (!console2)
+      return;
+    if (console2.dataset.unread === void 0)
+      console2.dataset.unread = "0";
+    if (!console2.open)
+      console2.dataset.unread = `${parseInt(console2.dataset.unread, 10) + 1}`;
+    const contents = console2.querySelector("details > div");
+    if (!contents)
+      return;
+    const entry = document.createElement("div");
+    entry.textContent = message;
+    contents.prepend(entry);
   }
 
   // src/utils/forms.ts
@@ -332,9 +357,11 @@
     updateCurtainMessage(`Grabbing #${grabberId}`);
     const response = await callAPI("grab", params, true);
     if (response.status != 200) {
+      report(`Grab #${grabberId} failed`);
       console.error(response);
     } else
       newRows.push(response.data);
+    report(`${newRows.length} new entries`);
     updateCurtainMessage(`Updating state`);
     const updateGrabbers = await downloadGrabbers();
     pullCurtain(false);
@@ -371,11 +398,11 @@
     const proto = fromTemplate("generic-grabber")?.firstElementChild;
     if (!proto)
       return null;
-    proto.dataset.grabberForm = type;
-    proto.appendChild(renderForm(meta.form));
-    const buttons = fromTemplate("generic-grabber-buttons")?.firstElementChild;
+    const buttons = proto.querySelector("div");
     if (!buttons)
       return null;
+    proto.dataset.grabberForm = type;
+    proto.appendChild(renderForm(meta.form));
     const [grab, less, remv] = [
       buttons.querySelector(`[data-grabber-button="grab"]`),
       buttons.querySelector(`[data-grabber-button="less"]`),
@@ -434,7 +461,9 @@
       })
     );
     document.querySelector("#grabbers-save")?.addEventListener("click", () => saveGrabbers());
+    init();
     showGrabbers(userData.grabbers);
+    report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);
   }
   async function login(e) {
     e.preventDefault();

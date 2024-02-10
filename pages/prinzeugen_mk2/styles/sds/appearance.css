@@ -14,3 +14,7 @@
 	background-color: var(--color-secondary);
 	border-radius: var(--dims-rounding);
 }
+
+.glass {
+	backdrop-filter: blur(var(--dims-blur));
+}

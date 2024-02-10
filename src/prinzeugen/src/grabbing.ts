@@ -4,6 +4,7 @@ import type { Grabber, GrabberType } from "./utils/grabbers"
 import { listenToKeyboard } from "./utils/io";
 import { updateTabListeners, switchTabContent } from "./utils/tabs";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
+import { report } from "./utils/console";
 
 import * as forms from "./utils/forms";
 
@@ -43,12 +44,12 @@ export async function manualGrab(){
 		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
 		const response = await callAPI("grab", {id: i}, true);
 		if (response.status != 200){
-			// report(`Grab #${i} failed`);
+			report(`Grab #${i} failed`);
 			console.error(response);
 		} else
 			newRows = newRows.concat(response.data);
 	}
-	// report(`${newRows.length} new entries`);
+	report(`${newRows.length} new entries`);
 
 	updateCurtainMessage(`Updating state`);
 	const updateGrabbers = await downloadGrabbers();
@@ -71,12 +72,12 @@ export async function selectiveGrab(grabberId: number, batchSize?: number){
 	updateCurtainMessage(`Grabbing #${grabberId}`);
 	const response = await callAPI("grab", params, true);
 	if (response.status != 200){
-		// report(`Grab #${grabberId} failed`);
+		report(`Grab #${grabberId} failed`);
 		console.error(response);
 	} else
 		newRows.push(response.data);
 	
-	// report(`${newRows.length} new entries`);
+	report(`${newRows.length} new entries`);
 
 	updateCurtainMessage(`Updating state`);
 	const updateGrabbers = await downloadGrabbers();
@@ -120,13 +121,12 @@ export function renderGrabber(type: GrabberType, index?: number) {
 
 	const proto = (fromTemplate("generic-grabber") as Element)?.firstElementChild as HTMLElement;
 	if (!proto) return null;
+	const buttons = proto.querySelector("div");
+	if (!buttons) return null;
 
 	proto.dataset.grabberForm = type;
 
 	proto.appendChild(forms.renderForm(meta.form));
-
-	const buttons = (fromTemplate("generic-grabber-buttons") as Element)?.firstElementChild;
-	if (!buttons) return null;
 
 	const [grab, less, remv] = [
 		buttons.querySelector<HTMLButtonElement>(`[data-grabber-button="grab"]`),
