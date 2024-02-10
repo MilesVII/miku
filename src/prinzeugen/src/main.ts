@@ -1,16 +1,14 @@
-import { callAPI, safe, sleep, setElementValue, load, save } from "./utils/utils";
-import { Grabbers } from "./utils/grabbers";
+import { callAPI, safe, setElementValue, load, save } from "./utils/utils";
 import type { GrabberType } from "./utils/grabbers"
 import { listenToKeyboard } from "./utils/io";
 import { updateTabListeners, switchTabContent } from "./utils/tabs";
-import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
+import { pullCurtain } from "./utils/curtain";
 import { genericFlickerUpdate } from "./utils/flicker";
 import { init as initConsole, report } from "./utils/console";
 
 import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing";
 import { decide, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
-
-const PLACEHOLDER_URL = "placeholder.png";
+import { loadMessagePool } from "./pool";
 
 main();
 
@@ -86,6 +84,7 @@ async function authorize(userData: any){
 	addClick("#moderables-reload", reloadModerables);
 	addClick("#moderables-upscale", upscalePreviews);
 	addClick("#moderables-submit", moderate);
+	addClick("#pool-load", () => loadMessagePool());
 	addClick("#settings-save", saveSettings);
 	addClick("#settings-signout", signOut);
 
@@ -123,137 +122,6 @@ async function login(e: Event){
 
 	return false;
 }
-
-
-
-// async function manualCache(){
-// 	pullCurtain(true);
-	
-// 	const status = await callAPI("linkCache", {}, true);
-// 	if (status.status != 200){
-// 		console.error(status);
-// 		pullCurtain(false);
-// 		return;
-// 	}
-
-// 	let counter = 0;
-// 	const targets = status.data.leftUncached;
-// 	for (let target of targets){
-// 		updateCurtainMessage(`Downloading images: ${counter} / ${targets.length} done`);
-// 		++counter;
-		
-// 		const r = await callAPI("downloadCache", {
-// 			id: target.id
-// 		}, true);
-// 		if (r.status != 201)
-// 			console.warn(r);
-// 	}
-
-// 	const newStatus = await callAPI("linkCache", {}, true);
-// 	report(`Caching complete. ${newStatus.data?.leftUncached?.length} left uncached.`);
-// 	console.log(newStatus);
-
-// 	updateCurtainMessage(`Updating moderables`);
-// 	await reloadModerables(false);
-
-// 	pullCurtain(false);
-// }
-
-
-
-// function setPreviewPost(row){
-// 	const main = document.querySelector("#poolPostMain");
-// 	const preview = main.querySelector("img");
-// 	if (row.message.version == 3){
-// 		preview.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
-// 	} else {
-// 		preview.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
-// 	}
-	
-
-// 	const links = main.querySelector("#poolPostLinks");
-// 	links.innerHTML = "";
-// 	for (let link of row.message?.links || []){
-// 		const proto = fromTemplate("poolPostLink");
-// 		proto.href = link.url;
-// 		proto.textContent = link.text;
-// 		links.appendChild(proto);
-// 	}
-
-// 	const controls = main.querySelector("#poolPostControls");
-// 	controls.innerHTML = "";
-
-// 	if (row){
-// 		const unsch = fromTemplate("poolButton");
-// 		unsch.textContent = "Unschedule";
-// 		unsch.addEventListener("click", () => unschedulePost(row));
-
-// 		const copyd = fromTemplate("poolButton");
-// 		copyd.textContent = "Show row data in console";
-// 		copyd.addEventListener("click", () => console.log(row));
-
-// 		controls.appendChild(unsch);
-// 		controls.appendChild(copyd);
-// 	}
-
-// 	preview.scrollIntoView({behavior: "smooth", block: "center"})
-// }
-
-// async function unschedulePost(row){
-// 	if (!row?.id) return;
-// 	pullCurtain(true);
-// 	const response = await callAPI("unschedulePost", {
-// 		id: row.id
-// 	}, true);
-
-// 	if (response.status < 300){
-// 		setPreviewPost(null);
-// 		const remTarget = Array.from(document.querySelectorAll(".poolPreviewItem")).find(e => e.dataset.id == row.id);
-// 		remTarget.remove();
-// 	}
-// 	pullCurtain(false);
-// }
-
-// async function loadMessagePool(page = 0){
-// 	const STRIDE = 64;
-// 	const container = document.querySelector(".poolPreviewContainer");
-// 	container.innerHTML = "";
-
-// 	pullCurtain(true);
-// 	const rows = await callAPI("getPoolPage", {
-// 		page: page,
-// 		stride: STRIDE
-// 	}, true);
-
-// 	for (let row of rows.data.rows){
-// 		const proto = fromTemplate("poolPreviewItem");
-// 		proto.dataset.id = row.id;
-// 		const img = proto.querySelector("img");
-// 		if (row.message.version == 1){
-// 			img.src = row.message.raw?.preview || row.message.image[0];
-// 		} else if (row.message.version == 3) {
-// 			img.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
-// 		} else {
-// 			img.src = PLACEHOLDER_URL;
-// 		}
-// 		img.addEventListener("click", () => setPreviewPost(row));
-		
-// 		container.appendChild(proto);
-// 	}
-
-// 	const pager = document.querySelector("#poolPageControls");
-// 	pager.innerHTML = "";
-// 	const postCount = rows.data.count;
-// 	const pageCount = Math.ceil(postCount / STRIDE);
-// 	for (let i = 0; i < pageCount; ++i){
-// 		const pageSelector = fromTemplate("poolButton");
-// 		pageSelector.textContent = i + 1;
-// 		pageSelector.addEventListener("click", () => loadMessagePool(i));
-// 		pager.appendChild(pageSelector);
-// 	}
-
-// 	pullCurtain(false);
-// }
 
 let wipeLock = true;
 async function wipePool(){
@@ -306,12 +174,3 @@ function signOut(){
 	save("login", null);
 	switchTabContent("state", "login");
 }
-
-// function report(msg){
-// 	let message = document.createElement("div");
-// 	message.textContent = msg;
-
-// 	document.querySelector("#statuslog").prepend(message);
-
-// 	Array.from(document.querySelector("#statuslog").children).forEach((c, i) => c.style.opacity = (100 / (i + 1)) + "%");
-// }

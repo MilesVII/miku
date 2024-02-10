@@ -1,8 +1,6 @@
 import { callAPI, fromTemplate } from "./utils/utils";
 import { Grabbers } from "./utils/grabbers";
 import type { Grabber, GrabberType } from "./utils/grabbers"
-import { listenToKeyboard } from "./utils/io";
-import { updateTabListeners, switchTabContent } from "./utils/tabs";
 import { pullCurtain, updateCurtainMessage } from "./utils/curtain";
 import { report } from "./utils/console";
 import { downloadModerables, displayModerables } from "./moderation";

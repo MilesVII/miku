@@ -1,5 +1,3 @@
-
-
 .tabbar {
 	display: flex;
 	flex-flow: row nowrap;
@@ -71,56 +69,6 @@
 	outline: none;
 }
 
-
-
-
-
-
-
-
-
-
-/* 
-
-.previewSection {
-	align-items: start;
+.pool-item > img {
+	max-height: 20vh;
 }
-
-.previewImage, .previewImageBig {
-}
-
-.previewImageBig {
-	width: 85%;
-}
-
-.previewImage > img {
-	max-height: 52vh;
-}
-
-.poolMainPreview {
-	max-height: 52vh;
-}
-.poolPreviewContainer {
-	display: flex;
-	flex-flow: row wrap;
-	justify-content: center;
-	align-items: center;
-	gap: 3vw 2vh;
-}
-.poolPreviewItem {
-	display: flex;
-	width: 20vw;
-}
-.poolPreviewItem > img {
-	max-width: 20vw;
-	max-height: 24vw;
-	cursor: pointer;
-}
-
-.previewImageBig > img {
-	max-height: 24vh;
-}
-
-.hidden {
-	display: none !important;
-} */

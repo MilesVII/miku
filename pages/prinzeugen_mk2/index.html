@@ -66,6 +66,22 @@
 				<!-- moderables -->
 			</div>
 		</div>
+		<!-- Pool tab -->
+		<div class="container column content-width wide hidden" data-tab-variant="pool" data-tab-variant-group="tabs">
+			<div class="container row unpad wrap center-contents wide">
+				<button id="pool-load">Load</button>
+			</div>
+			<div class="container unpad row wrap wide center-contents" id="pool-pagination"></div>
+			<div class="container unpad row wrap wide center-contents" id="pool-content">
+				<!-- pool -->
+			</div>
+			<dialog id="pool-preview" class="bordered content-width" onclick="event.target === this && this.close()">
+				<form method="dialog" class="container column wide center-contents">
+					<img src="placeholder.png" class="rounded" />
+					<div class="container row unpad wrap center-contents wide" id="pool-preview-controls"></div>
+				</form>
+			</dialog>
+		</div>
 		<!-- Settings tab -->
 		<div class="container column content-width wide hidden" data-tab-variant="sets" data-tab-variant-group="tabs">
 			<fieldset>
@@ -121,6 +137,11 @@
 				<button tabindex="-1" data-moderable-button="reject">Reject</button>
 			</div>
 		</div>
+	</template>
+	<template id="generic-pool-item">
+		<article class="clickable hoverable unpad pool-item">
+			<img class="rounded" />
+		</article>
 	</template>
 
 	<body class="wide">

@@ -646,6 +646,110 @@
     return proto;
   }
 
+  // src/pool.ts
+  var PLACEHOLDER_URL = "placeholder.png";
+  async function loadMessagePool(page = 0) {
+    const STRIDE = 64;
+    const container = document.querySelector("#pool-content");
+    if (!container)
+      return;
+    const pager = document.querySelector("#pool-pagination");
+    if (!pager)
+      return;
+    container.innerHTML = "";
+    pullCurtain(true);
+    const rows = await callAPI("getPoolPage", {
+      page,
+      stride: STRIDE
+    }, true);
+    pullCurtain(false);
+    for (let row of rows.data.rows) {
+      const proto = fromTemplate("generic-pool-item")?.firstElementChild;
+      if (!proto)
+        return;
+      proto.dataset.id = row.id;
+      const img = proto.querySelector("img");
+      if (!img)
+        return;
+      img.title = generateTitle(row);
+      if (row.message.version == 1) {
+        img.src = row.message.raw?.preview || row.message.image[0];
+      } else if (row.message.version == 3) {
+        img.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
+      } else {
+        img.src = PLACEHOLDER_URL;
+      }
+      proto.addEventListener("click", () => setPreviewPost(row));
+      container.append(proto);
+    }
+    pager.innerHTML = "";
+    const postCount = rows.data.count;
+    const pageCount = Math.ceil(postCount / STRIDE);
+    for (let i = 0; i < pageCount; ++i) {
+      const pageSelector = document.createElement("button");
+      pageSelector.textContent = `${i + 1}`;
+      pageSelector.addEventListener("click", () => loadMessagePool(i));
+      pager.appendChild(pageSelector);
+    }
+  }
+  function setPreviewPost(row) {
+    const dialog = document.querySelector("dialog#pool-preview");
+    if (!dialog)
+      return;
+    const picture = dialog.querySelector("img");
+    if (!picture)
+      return;
+    if (row.message.version == 3) {
+      picture.src = row.message.cached ? row.message.cachedContent.preview : row.message.preview;
+    } else {
+      picture.src = row ? row.message.raw.preview || row.message.image[0] : PLACEHOLDER_URL;
+    }
+    picture.title = generateTitle(row);
+    const controls = dialog.querySelector("#pool-preview-controls");
+    if (!controls)
+      return;
+    controls.innerHTML = "";
+    function button(caption, action) {
+      const b = document.createElement("button");
+      b.textContent = caption;
+      b.addEventListener("click", action);
+      return b;
+    }
+    const linkset = row.message?.links || [];
+    const links = linkset.map((link) => {
+      const anchor = document.createElement("a");
+      anchor.textContent = link.text;
+      anchor.href = link.url;
+      anchor.classList.add("clickable");
+      anchor.target = "_blank";
+      return anchor;
+    });
+    controls.append(
+      ...links,
+      button("Unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
+      button("Show item details in console", () => console.log(row))
+    );
+    dialog.showModal();
+  }
+  async function unschedulePost(rowId) {
+    pullCurtain(true);
+    const response = await callAPI("unschedulePost", {
+      id: rowId
+    }, true);
+    pullCurtain(false);
+    if (response.status < 300) {
+      const target = document.querySelector(`.pool-item[data-id="${rowId}"]`);
+      if (target)
+        target.classList.add("hidden");
+    }
+  }
+  function generateTitle(row) {
+    return [
+      row.message.artists?.join(" "),
+      row.message.tags?.join(" ")
+    ].join("\n");
+  }
+
   // src/main.ts
   main();
   async function main() {
@@ -708,6 +812,7 @@ ${event.filename} ${event.lineno}:${event.colno}`);
     addClick("#moderables-reload", reloadModerables);
     addClick("#moderables-upscale", upscalePreviews);
     addClick("#moderables-submit", moderate);
+    addClick("#pool-load", () => loadMessagePool());
     addClick("#settings-save", saveSettings);
     addClick("#settings-signout", signOut);
     init();

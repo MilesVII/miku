@@ -9,21 +9,23 @@ button {
 	background: none;
 	font: inherit;
 	outline: inherit;
-	cursor: pointer;
 	text-transform: lowercase;
-	
+}
+button, .clickable {
+	cursor: pointer;
 	padding: var(--dims-padding);
 	border: var(--dims-line) solid var(--color-secondary);
 	border-radius: var(--dims-rounding);
 	transition: background-color var(--transition-time), border-color var(--transition-time);
 }
-button:hover {
+button:hover, .clickable:hover {
 	background-color: var(--color-secondary);
 }
-button:focus {
+button:focus, .clickable:focus {
 	border-color: var(--color-accent);
+	outline: none;
 }
-button:active {
+button:active, .clickable:active {
 	background-color: var(--color-accent);
 }
 button:disabled {
@@ -88,11 +90,9 @@ dialog {
 	font: inherit;
 	background: var(--color-base);
 	border: none;
+	padding: 0;
 }
 dialog::backdrop {
 	backdrop-filter: blur(var(--dims-blur));
 	cursor: pointer;
-}
-dialog > form {
-	padding: var(--dims-padding);
 }
