@@ -817,7 +817,7 @@ export default async function handler(request, response) {
 		case ("getPoolPage"): {
 			const stride = request.body.stride || 100;
 			const page = request.body.page;
-			const rows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&approved=eq.true`, "GET", {
+			const rows = await db2(`/rest/v1/pool?order=id&user=eq.${request.body.user}&approved=eq.true`, "GET", {
 				"Prefer": "count=exact",
 				"Range": renderContentRange(page * stride, (page + 1) * stride)
 			});
