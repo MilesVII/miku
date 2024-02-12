@@ -21,4 +21,5 @@
 
 .glass {
 	backdrop-filter: blur(var(--dims-blur));
+	background-color: var(--color-base-semi);
 }

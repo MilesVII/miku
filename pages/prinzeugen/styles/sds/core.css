@@ -22,6 +22,7 @@
 	color-scheme: only dark;
 
 	--color-base: #171717;
+	--color-base-semi: rgb(23 23 23 / 70%);
 	--color-secondary: #444444;
 	--color-accent: #DA0037;
 	--color-text: #EDEDED;
