@@ -65,8 +65,12 @@ fieldset {
 	transition: border-color var(--transition-time);
 }
 fieldset > legend {
+	display: flex;
+	gap: var(--dims-spacing);
 	color: var(--color-secondary);
 	transition: color var(--transition-time);
+	padding-left: var(--dims-padding);
+	padding-right: var(--dims-padding);
 }
 fieldset > .field {
 	padding: 0;

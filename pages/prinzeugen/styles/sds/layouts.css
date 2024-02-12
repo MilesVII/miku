@@ -1,6 +1,10 @@
 .padded {
 	padding: var(--dims-padding);
 }
+.wide-padded {
+	padding-left: var(--dims-padding);
+	padding-right: var(--dims-padding);
+}
 
 .container {
 	display: flex;
