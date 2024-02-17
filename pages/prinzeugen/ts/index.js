@@ -194,6 +194,45 @@
     contents.prepend(entry);
   }
 
+  // src/utils/themes.ts
+  function init2() {
+    const theme = window.localStorage.getItem("theme");
+    if (theme)
+      switchTheme(theme);
+  }
+  function selectorList() {
+    const rules = [];
+    for (const ss of document.styleSheets)
+      if (ss.href?.startsWith(window.location.href)) {
+        const raw = [...ss.cssRules];
+        rules.push(...raw.filter((r) => r.constructor.name === "CSSStyleRule"));
+      }
+    const themes = rules.map((r) => r.selectorText.match(/\.theme-(.*)/)).filter((r) => r);
+    const container = new DocumentFragment();
+    container.append(...themes.map((t) => selectorItem(...t)));
+    return container;
+  }
+  function selectorItem(cssSelector, name) {
+    const button = fromTemplate("theme-selector");
+    if (!button)
+      return null;
+    const svg = button.firstElementChild;
+    if (!svg)
+      return null;
+    const themeClassName = `theme-${name}`;
+    svg.classList.add(themeClassName);
+    svg.addEventListener("click", () => switchTheme(themeClassName));
+    return svg;
+  }
+  function switchTheme(themeClassName) {
+    document.body.classList.forEach((c) => {
+      if (c.startsWith("theme-"))
+        document.body.classList.remove(c);
+    });
+    document.body.classList.add(themeClassName);
+    window.localStorage.setItem("theme", themeClassName);
+  }
+
   // src/utils/forms.ts
   function fieldSchema(key, type, additional) {
     return {
@@ -753,6 +792,7 @@
   // src/main.ts
   main();
   async function main() {
+    init2();
     updateTabListeners();
     window.addEventListener("error", (event) => {
       report(`${event.message}
@@ -816,6 +856,7 @@ ${event.filename} ${event.lineno}:${event.colno}`);
     addClick("#settings-save", saveSettings);
     addClick("#settings-signout", signOut);
     init();
+    document.querySelector("#settings-theme")?.append(selectorList());
     displayGrabbers(userData.grabbers);
     displayModerables(userData.moderables);
     report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);

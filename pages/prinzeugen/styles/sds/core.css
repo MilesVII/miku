@@ -47,7 +47,7 @@
 	--dims-glow: var(--dims-spacing);
 	--effect-glow: 0 0 var(--dims-glow) var(--color-accent);
 	
-	background-color: var(--color-base);
+	/*background-color: var(--color-base);*/
 
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
@@ -58,6 +58,28 @@
 	font-size: var(--dims-font-regular);
 	color: var(--color-text);
 	text-transform: lowercase;
+}
+
+.theme-dark-pink {
+	--color-base: #171717;
+	--color-base-semi: rgb(23 23 23 / 70%);
+	--color-secondary: #444444;
+	--color-accent: #DA0037;
+	--color-text: #EDEDED;
+}
+.theme-dark-teal {
+	--color-base: #222831;
+	--color-base-semi: rgb(34 40 49 / 70%);
+	--color-secondary: #393E46;
+	--color-accent: #00ADB5;
+	--color-text: #EEEEEE;
+}
+.theme-light-teal {
+	--color-base: #DDDDFD;
+	--color-base-semi: rgb(240 240 250 / 70%);
+	--color-secondary: darkgray;
+	--color-accent: #00ADB5;
+	--color-text: #111130;
 }
 
 * {
@@ -75,6 +97,10 @@ html, body {
 
 body {
 	overflow: hidden auto;
+	
+	--effect-glow: 0 0 var(--dims-glow) var(--color-accent);
+	color: var(--color-text);
+	background-color: var(--color-base);
 }
 
 h1, h2, h3, h4, h5, h6, nav {

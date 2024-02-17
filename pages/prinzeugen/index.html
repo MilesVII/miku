@@ -89,6 +89,10 @@
 				<input type="text" id="settings-password" class="field" placeholder="Keep empty to keep old password" />
 			</fieldset>
 			<fieldset>
+				<legend><label for="settings-theme">Theme</label></legend>
+				<div id="settings-theme" class="container row wide"></div>
+			</fieldset>
+			<fieldset>
 				<legend><label for="settings-tg-token">Telegram bot token</label></legend>
 				<input type="text" id="settings-tg-token" class="field" />
 			</fieldset>
@@ -142,6 +146,30 @@
 		<article class="clickable hoverable unpad pool-item">
 			<img class="rounded" />
 		</article>
+	</template>
+	<template id="theme-selector">
+		<svg class="rounded bordered hoverable selector-theme" viewBox="0 0 6 1" xmlns="http://www.w3.org/2000/svg">
+			<path
+				d="M0,0 l100,0 l0,1 l-100,0 Z"
+				fill="var(--color-base)"
+			/>
+			<path
+				d="M1,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-secondary)"
+			/>
+			<path
+				d="M2,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-accent)"
+			/>
+			<path
+				d="M3,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-text)"
+			/>
+			<path
+				d="M4,1 l1,-1 L100,0 L100,1 Z"
+				fill="var(--color-base)"
+			/>
+		</svg>
 	</template>
 
 	<body class="wide">

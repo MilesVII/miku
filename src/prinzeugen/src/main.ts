@@ -1,10 +1,11 @@
-import { callAPI, safe, setElementValue, load, save } from "./utils/utils";
+import { callAPI, safe, setElementValue, load, save, fromTemplate } from "./utils/utils";
 import type { GrabberType } from "./utils/grabbers"
 import { listenToKeyboard } from "./utils/io";
 import { updateTabListeners, switchTabContent } from "./utils/tabs";
 import { pullCurtain } from "./utils/curtain";
 import { genericFlickerUpdate } from "./utils/flicker";
 import { init as initConsole, report } from "./utils/console";
+import { init as initTheme, selectorList as themeSelectorList } from "./utils/themes";
 
 import { addGrabber, saveGrabbers, displayGrabbers, batchGrab } from "./grabbing";
 import { decide, fixFocus, upscalePreviews, displayModerables, moderate, reloadModerables } from "./moderation";
@@ -13,6 +14,8 @@ import { loadMessagePool } from "./pool";
 main();
 
 async function main(){
+	initTheme();
+
 	updateTabListeners();
 
 	window.addEventListener("error", (event) => {
@@ -89,6 +92,8 @@ async function authorize(userData: any){
 	addClick("#settings-signout", signOut);
 
 	initConsole();
+
+	document.querySelector("#settings-theme")?.append(themeSelectorList());
 
 	displayGrabbers(userData.grabbers);
 	displayModerables(userData.moderables);
