@@ -207,6 +207,7 @@
         const raw = [...ss.cssRules];
         rules.push(...raw.filter((r) => r.constructor.name === "CSSStyleRule"));
       }
+    console.log(rules);
     const themes = rules.map((r) => r.selectorText.match(/\.theme-(.*)/)).filter((r) => r);
     const container = new DocumentFragment();
     container.append(...themes.map((t) => selectorItem(...t)));
@@ -586,7 +587,7 @@
       pullCurtain(false);
       return;
     }
-    let newRows = [];
+    let newRowsCount = 0;
     for (let i = 0; i < grabbersReference.length; ++i) {
       updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
       const response = await callAPI("grab", { id: i }, true);
@@ -594,14 +595,14 @@
         report(`Grab #${i} failed`);
         console.error(response);
       } else
-        newRows.push(...response.data);
+        newRowsCount += response.data;
     }
-    report(`${newRows.length} new entries`);
+    report(`${newRowsCount} new entries`);
     afterGrab();
   }
   async function selectiveGrab(grabberId, batchSize) {
     pullCurtain(true);
-    let newRows = [];
+    let newRowsCount = 0;
     const params = {
       id: grabberId,
       ...batchSize ? { batchSize } : {}
@@ -612,8 +613,8 @@
       report(`Grab #${grabberId} failed`);
       console.error(response);
     } else
-      newRows.push(...response.data);
-    report(`${newRows.length} new entries`);
+      newRowsCount += response.data;
+    report(`${newRowsCount} new entries`);
     afterGrab();
   }
   async function afterGrab() {
@@ -702,7 +703,7 @@
       stride: STRIDE
     }, true);
     pullCurtain(false);
-    for (let row of rows.data.rows) {
+    for (let row of rows.data) {
       const proto = fromTemplate("generic-pool-item")?.firstElementChild;
       if (!proto)
         return;
@@ -722,7 +723,7 @@
       container.append(proto);
     }
     pager.innerHTML = "";
-    const postCount = rows.data.count;
+    const postCount = rows.data[0]?.total || 0;
     const pageCount = Math.ceil(postCount / STRIDE);
     for (let i = 0; i < pageCount; ++i) {
       const pageSelector = document.createElement("button");
@@ -859,7 +860,7 @@ ${event.filename} ${event.lineno}:${event.colno}`);
     document.querySelector("#settings-theme")?.append(selectorList());
     displayGrabbers(userData.grabbers);
     displayModerables(userData.moderables);
-    report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);
+    report(`Welcome back, ${userData.name}. You have ${userData.stats.approved} post${userData.stats.approved == 1 ? "" : "s"} in pool, ${userData.stats.pending} pending moderation, ${userData.stats.failed} failed`);
   }
   async function login(e) {
     e.preventDefault();

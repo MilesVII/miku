@@ -19,7 +19,7 @@ export async function loadMessagePool(page = 0){
 	}, true);
 	pullCurtain(false);
 
-	for (let row of rows.data.rows){
+	for (let row of rows.data){
 		const proto = (fromTemplate("generic-pool-item") as Element)?.firstElementChild as HTMLElement;
 		if (!proto) return;
 
@@ -42,7 +42,7 @@ export async function loadMessagePool(page = 0){
 	}
 
 	pager.innerHTML = "";
-	const postCount = rows.data.count;
+	const postCount = rows.data[0]?.total || 0;
 	const pageCount = Math.ceil(postCount / STRIDE);
 	for (let i = 0; i < pageCount; ++i){
 		const pageSelector = document.createElement("button");

@@ -98,7 +98,7 @@ async function authorize(userData: any){
 	displayGrabbers(userData.grabbers);
 	displayModerables(userData.moderables);
 
-	report(`Welcome back, ${userData.name}. You have ${userData.postsScheduled} post${userData.postsScheduled == 1 ? "" : "s"} in pool, ${userData.moderables.length} pending moderation`);
+	report(`Welcome back, ${userData.name}. You have ${userData.stats.approved} post${userData.stats.approved == 1 ? "" : "s"} in pool, ${userData.stats.pending} pending moderation, ${userData.stats.failed} failed`);
 }
 
 async function login(e: Event){

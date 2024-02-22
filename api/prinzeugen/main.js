@@ -1,8 +1,10 @@
 import { chunk, safe, tg, tgReport, phetch, phetchV2, safeParse, hashPassword, parseTelegramTarget, wegood, escapeMarkdown, processImage } from "../utils.js";
 import { grabbersMeta } from "./grabbers.js";
-import { validate, ARRAY_OF, OPTIONAL, DYNAMIC } from "arstotzka"; 
+import { validate, ARRAY_OF, OPTIONAL, DYNAMIC, ANY_OF } from "arstotzka"; 
+import postgres from "postgres";
 
-const GRAB_INTERVAL_MS = 0 * 60 * 60 * 1000; // 1hr
+const sql = postgres(process.env.PE_NEON_CONNECTION_STRING);
+
 const NINE_MB = 9 * 1024 * 1024;
 const PUB_FLAGS = {
 	//ALLOW_IMG_ONLY: "imgonly",
@@ -52,19 +54,6 @@ const schema = {
 		id: [OPTIONAL, "number"],
 		batchSize: [OPTIONAL, "number"]
 	},
-	linkCache: {
-		user: "number",
-		userToken: "string"
-	},
-	optimizeCache: {
-		user: "number",
-		userToken: "string"
-	},
-	downloadCache: {
-		user: "number",
-		userToken: "string",
-		id: "number"
-	},
 	getModerables: {
 		user: "number",
 		userToken: "string"
@@ -85,14 +74,13 @@ const schema = {
 		userToken: "string",
 		decisions: ARRAY_OF({
 			id: "number",
-			approved: "boolean",
-			score: [OPTIONAL, "number"]
+			approved: "boolean"
 		})
 	},
 	unschedulePost: {
 		user: "number",
 		userToken: "string",
-		id: "number"
+		id: ANY_OF(["number", x => !isNaN(parseInt(x))])
 	},
 	manual: {
 		user: "number",
@@ -148,149 +136,28 @@ const messageSchema = [
 	}
 ];
 
-async function db(url, method, headers, body){
-	return safeParse(
-		await phetch(`${process.env.PE_DB_URL}${url}`, {
-			method: method || "GET",
-			headers: Object.assign({
-				"apikey": process.env.PE_SUPABASE_KEY,
-				"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
-				"Content-Type": "application/json"
-			}, headers || {})
-		}, body ? JSON.stringify(body) : null)
-	);
+function getApproved(user, limit = "all", offset = 0){
+	return (sql`
+		select *, count(*) over() as total
+			from "pool"
+			where "user" = ${user} and "approved" = true
+			order by id asc
+			limit ${limit}
+			offset ${offset}
+	`);
 }
 
-function db2(url, method, headers, body){
-	return phetchV2(`${process.env.PE_DB_URL}${url}`, {
-		method: method || "GET",
-		headers: Object.assign({
-			"apikey": process.env.PE_SUPABASE_KEY,
-			"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`,
-			"Content-Type": "application/json"
-		}, headers || {})
-	}, body ? JSON.stringify(body) : null);
-}
-
-function storage(url, method, headers, body){
-	return phetchV2(`${process.env.PE_DB_URL}${url}`, {
-		method: method || "GET",
-		headers: Object.assign({
-			"apikey": process.env.PE_SUPABASE_KEY,
-			"Authorization": `Bearer ${process.env.PE_SUPABASE_KEY}`
-		}, headers || {})
-	}, body || null);
-}
-
-function uploadToStorage(bucket, path, data){
-	return storage(`/storage/v1/object/${bucket}/${path}`, "POST", null, data);
-}
-
-function getStorageLink(bucket, path){
-	return `${process.env.PE_DB_URL}/storage/v1/object/public/${bucket}/${path}`;
-}
-
-async function listStorageContents(bucket, path){
-	const PAGE_SIZE = 1000;
-	function fwoosh(page){
-		return storage(`/storage/v1/object/list/${bucket}`, "POST", {
-			"Content-Type": "application/json"
-		}, JSON.stringify({
-			prefix: path,
-			limit: PAGE_SIZE,
-			offset: page * PAGE_SIZE
-		}));
-	}
-
-	const first = await fwoosh(0);
-	if (!wegood(first.status)) return first;
-
-	let lastLength = first.body.length;
-	for (let i = 1; lastLength == PAGE_SIZE; ++i){
-		const aux = await fwoosh(i);
-		if (!wegood(aux.status)) return aux;
-		lastLength = aux.body.length;
-		first.body.push(...aux.body);
-	}
-
-	return first.body;
-}
-
-function removeStorageContents(bucket, names){
-	const payload = JSON.stringify({
-		prefixes: names,
-	});
-	return storage(`/storage/v1/object/${bucket}`, "DELETE", {
-		"Content-Type": "application/json",
-		"Content-Length": payload.length //won't work without length specified. will fail if there are unicode characters in names
-	}, payload);
-}
-
-async function getAllRows(table, queryParameters){
-	function result(success, data){
-		return {success, data};
-	}
-	const url = `/rest/v1/${table}?${queryParameters.join("&")}`;
-
-	const first = await db2(url, "GET", {"Prefer": "count=exact"});
-	if (!wegood(first.status)) 
-		return result(false, first);
-
-	const rows = first.body;
-
-	const rng = parseContentRange(first.headers["content-range"]);
-	const stride = rng.to - rng.from;
-
-	while (rng.count > rng.to){
-		rng.from += stride;
-		rng.to += stride;
-		const amndmnt = await db2(url, "GET", {
-			"Prefer": "count=exact",
-			"Range": rng.renderRange()
-		});
-		if (wegood(amndmnt.status)) {
-			rows.push(...amndmnt.body);
-		} else {
-			return result(false, amndmnt);
-		}
-	}
-
-	return result(true, 200, rows);
-}
-
-function renderContentRange(from, to){
-	return `${from}-${to - 1}`;
-}
-
-function parseContentRange(range){
-	try {
-		const parts = range.split("/");
-		const leftParts = parts[0].split("-");
-		const proto = {
-			from: parseInt(leftParts[0], 10),
-			to: parseInt(leftParts[1], 10) + 1,
-			count: parseInt(parts[1], 10)
-		};
-		proto.renderRange = () => `${proto.from}-${Math.min(proto.to, proto.count) - 1}`;
-		return proto;
-	} catch(e){
-		return null;
-	}
-}
-
-async function grab(user, token, id, batchSize){
+async function grab(user, id, batchSize){
 	function flatten(arr){
 		return arr.reduce((p, c) => p.concat(c), []);
 	}
 
-	const now = Date.now();
-
-	const grabbers = await getGrabbers(user, token);
-	if (grabbers.length == 0) return [];
-	if (grabbers == null) return null;
+	const grabbers = await getGrabbers(user);
+	if (grabbers === null) return null;
+	if (grabbers?.length == 0) return [];
 
 	let selection = grabbers;
-	if (id || id === 0){
+	if (id !== undefined){
 		if (id >= 0 && id < grabbers.length)
 			selection = [grabbers[id]];
 		else
@@ -302,92 +169,83 @@ async function grab(user, token, id, batchSize){
 		batchSize: batchSize
 	};
 
-	let moderated = [];
-	let approved = [];
+	const moderated = [];
+	const approved = [];
 	for (const grabber of selection){
-		grabber.state.lastGrab = grabber.state.lastGrab || 0;
-		if (now - grabber.state.lastGrab > GRAB_INTERVAL_MS){
-			grabber.state.lastGrab = now;
-			const prom = grabbersMeta[grabber.type].action(grabber, options);
+		const prom = grabbersMeta[grabber.type].action(grabber, options);
 
-			if (grabber.config.moderated) 
-				moderated.push(prom);
-			else
-				approved.push(prom);
-		}
+		if (grabber.config.moderated) 
+			moderated.push(prom);
+		else
+			approved.push(prom);
 	}
-	
-	const entries0 = flatten(await Promise.all(moderated)).map(message => ({
-		message: message,
-		user: user,
-		failed: false,
-		approved: null
-	}));
-	
-	const entries1 = flatten(await Promise.all(approved)).map(message => ({
-		message: message,
-		user: user,
-		failed: false,
-		approved: true
-	}));
 
-	const newEntries = entries0.concat(entries1);
+	const newEntries = [
+		...flatten(await Promise.all(moderated)).map(message => ({
+			message: message,
+			user: user,
+			failed: false,
+			approved: null
+		})),
+		...flatten(await Promise.all(approved)).map(message => ({
+			message: message,
+			user: user,
+			failed: false,
+			approved: true
+		}))
+	];
 
-	const response = await db("/rest/v1/pool", "POST", {"Prefer": "return=representation"}, newEntries);
-	if (grabbers.length > 0)
-		await setGrabbers(user, token, grabbers);
-
-	return response;
+	const grabbersColumn = {
+		grabbers: grabbers
+	};
+	if (newEntries.length > 0){
+		await sql.begin(async sql => {
+			await sql`insert into pool ${sql(newEntries)}`;
+			await sql`update users set ${sql(grabbersColumn)} where "id" = ${user}`;
+		});
+	}
+	return newEntries.length;
 }
 
-async function getGrabbers(user, token){
-	const response = await db(
-		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
-		"GET",
-		null,
-		null
-	);
+async function getGrabbers(user){
+	const response = await sql`select "grabbers" from "users" where "id" = ${user}`;
 	if (response[0]?.grabbers)
 		return response[0].grabbers || [];
 	else
 		return null;
 }
 
-async function setGrabbers(user, token, grabbers){
-	for (let grabber of grabbers)
-		if (!grabber.state.lastGrab) grabber.state.lastGrab = 0;
-	const response = await db2(
-		`/rest/v1/users?id=eq.${user}&access_token=eq.${token}&select=grabbers`,
-		"PATCH",
-		{"Prefer": "return=representation"},
-		{grabbers: grabbers}
-	);
-
-	if (wegood(response.status))
-		return true;
-	else {
-		tgReport(JSON.stringify(response));
-		return false;
-	}
+function setGrabbers(user, grabbers){
+	const grabbersColumn = {
+		grabbers: grabbers
+	};
+	return (sql`
+		update users
+			set ${sql(grabbersColumn)}
+			where "id" = ${user}
+			returning "grabbers"
+	`);
 }
 
-function getModerables(user){
-	return db(
-		`/rest/v1/pool?approved=is.null&user=eq.${user}&select=*`,
-		"GET",
-		{"Range": "0-199"},
-		null
-	);
+function getModerables(user, limit = 200){
+	return sql`select * from pool where "user" = ${user} and "approved" is null limit ${limit}`;
 }
 
-async function getScheduledPostCount(user){
-	const response = await db2(`/rest/v1/pool?user=eq.${user}`, "HEAD", {"Prefer": "count=exact"});
-	return response.headers["content-range"]?.split("/")[1];
+async function getStats(user){
+	const response = await sql`
+		select
+			sum (case when ("user" = ${user} and "approved" = true) then 1 else 0 end) as approved,
+			sum (case when ("user" = ${user} and "failed" = true) then 1 else 0 end) as failed,
+			sum (case when ("user" = ${user} and "approved" is NULL) then 1 else 0 end) as pending
+		from
+			pool
+	`;
+	return response[0];
 }
 
 async function userAccessAllowed(id, token){
-	const user = await db(`/rest/v1/users?id=eq.${id}&select=access_token`, "GET", null, null);
-	return user && user[0] && (user[0]["access_token"] == token || user[0]["access_token"] == null);
+	const user = await sql`select "access_token" from users where id = ${id}`;
+	return !!(user && user[0] && (user[0]["access_token"] === token || user[0]["access_token"] === null));
 }
 
 async function pingContentUrl(url){
@@ -641,16 +499,16 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("login"): {
-			const userData = await db(`/rest/v1/users?id=eq.${request.body.user}`);
+			const userData = await sql`select * from users where id = ${request.body.user}`;
 			if (userData?.length > 0 && (userData[0]["access_token"] == request.body.userToken || userData[0]["access_token"] == null)){
 				userData[0]["access_token"] = null;
 
-				const lickTheTongue = await Promise.all([
-					getModerables(request.body.user, request.body.userToken),
-					getScheduledPostCount(request.body.user)
+				const [moderables, stats] = await Promise.all([
+					getModerables(request.body.user),
+					getStats(request.body.user)
 				]);
-				userData[0].moderables = lickTheTongue[0];
-				userData[0].postsScheduled = lickTheTongue[1];
+				userData[0].moderables = moderables;
+				userData[0].stats = stats;
 				response.status(200).send(userData[0]);
 			} else {
 				response.status(401).send(null);
@@ -664,12 +522,12 @@ export default async function handler(request, response) {
 			if (request.body.newUserToken) delta.access_token = hashPassword(request.body.newUserToken);
 			if (request.body.newTgToken) delta.tg_token = request.body.newTgToken;
 			
-			await db(`/rest/v1/users?id=eq.${request.body.user}`, "PATCH", {"Prefer": "return=minimal"}, delta);
+			await sql`update users set ${sql(delta)} where id = ${request.body.user}`;
 			response.status(200).send();
 			return;
 		}
 		case ("getGrabbers"): {
-			const grabs = await getGrabbers(request.body.user, request.body.userToken);
+			const grabs = await getGrabbers(request.body.user);
 			if (grabs)
 				response.status(200).send(grabs);
 			else
@@ -677,170 +535,35 @@ export default async function handler(request, response) {
 			return;
 		}
 		case ("grab"): {
-			const newRows = await grab(request.body.user, request.body.userToken, request.body.id, request.body.batchSize);
-			if (newRows == null){
-				response.status(400).send("Wrong ID specified (out of range)");
-				return;
-			}
-			response.status(200).send(newRows);
-			return;
-		}
-		case ("linkCache"): {
-			const storageList = await listStorageContents("images", "");
-			if (!Array.isArray(storageList)){
-				response.status(502).send(storageList);
-				return;
-			}
-
-			const allRows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&message->version=eq.3&message->cached=eq.false&select=id,message`, "GET", {"Prefer": "count=exact"});
-			if (!wegood(allRows.status)){
-				response.status(502).send(allRows);
-				return;
-			}
-			const rows = allRows.body.filter(r => !r.message.notCacheable); //TODO: Potential issue if pool has more than 1000 not cacheable posts
-
-			const targets = rows.filter(r => storageList.find(s => s.name == `${r.id}.avif`));
-			targets.forEach(r => {
-				r.message.cached = true;
-				r.message.cachedContent = {
-					content: getStorageLink("images", `${r.id}.avif`),
-					preview: getStorageLink("images", `${r.id}_p.avif`)
-				}
-			});
-
-			let update = "No rows updated";
-			if (targets.length > 0)
-				update = await db2(`/rest/v1/pool?user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, targets);
-
-			response.status(200).send({
-				leftUncached: rows.filter(r => !targets.includes(r)),
-				linked: targets,
-				updateStatus: update
-			});
-			return;
-		}
-		case ("downloadCache"): {
-			//Only single post can be cached due to timeout issue
-			//The goal is to save cached version to storage
-			const rows = await db2(`/rest/v1/pool?user=eq.${request.body.user}&id=eq.${request.body.id}`, "GET");
-			if (!wegood(rows.status)){
-				response.status(502).send(rows);
-				return;
-			}
-			if (rows.body?.length != 1){
-				response.status(404).send(rows);
-				return;
-			}
-
-			const post = rows.body[0];
-			if (post.message.version != 3){
-				response.status(400).send("Invalid message format version");
-				return;
-			}
-			if (post.message.cached){
-				response.status(200).send("Cached already");
-				return;
-			}
-			if (post.message.notCacheable){
-				response.status(202).send("Post not cacheable");
-				return;
-			}
-
-			const links = await saveCache(post.id, post.message.content);
-			if (!Array.isArray(links)){
-				if (links == CACHING_ERROR_NOT_IMAGE){
-					post.message.notCacheable = true;
-					await db(
-						`/rest/v1/pool?id=eq.${post.id}`,
-						"PATCH",
-						{"Prefer": "return=minimal"},
-						{message: post.message}
-					);
-				}
-				response.status(502).send(links);
-				return;
-			}
-			response.status(201).send();
-			return;
-		}
-		case ("optimizeCache"): {
-			if (request.body.user != 1) {
-				response.status(401).send("shoo");
-				return;
-			}
-			const [storageList, posts] = await Promise.all([
-				listStorageContents("images", ""),
-				getAllRows("pool", [
-					"message->cached=eq.true"
-				])
-			]);
-			if (!Array.isArray(storageList)){
-				response.status(502).send(storageList);
-				return;
-			}
-			if (!posts.success){
-				response.status(502).send(posts.data);
-				return;
-			}
-
-			const targets = storageList
-				.filter(item => !posts.data.some(post => post.id == parseInt(item.name)))
-				.filter(item => !item.name.startsWith("."));
-
-			if (targets.length > 0){
-				const deletionResponse = await removeStorageContents("images", targets.map(t => t.name));
-				response.status(deletionResponse.status).send(deletionResponse);
-			} else {
-				response.status(204).send();
-			}
+			const newCount = await grab(request.body.user, request.body.id, request.body.batchSize);
+			response.status(200).send(newCount);
 			return;
 		}
 		case ("setGrabbers"): {
-			const success = await setGrabbers(request.body.user, request.body.userToken, request.body.grabbers);
+			const success = await setGrabbers(request.body.user, request.body.grabbers);
 			response.status(success ? 200 : 401).send();
 			return;
 		}
 		case ("getModerables"): {
-			const messages = await getModerables(request.body.user, request.body.userToken);
+			const messages = await getModerables(request.body.user);
 			response.status(200).send(messages);
 			return;
 		}
 		case ("getPool"): {
-			const rows = getAllRows("pool", [
-				`user=eq.${request.body.user}`,
-				"approved=eq.true"
-			]);
-
-			response.status(rows.success ? 200 : 502).send(rows.data);
+			const rows = await getApproved(request.body.user);
+			response.status(200).send(rows);
 			return;
 		}
 		case ("getPoolPage"): {
 			const stride = request.body.stride || 100;
 			const page = request.body.page;
-			const rows = await db2(`/rest/v1/pool?order=id&user=eq.${request.body.user}&approved=eq.true`, "GET", {
-				"Prefer": "count=exact",
-				"Range": renderContentRange(page * stride, (page + 1) * stride)
-			});
-			if (wegood(rows.status)) {
-				response.status(200).send({
-					count: parseContentRange(rows.headers["content-range"]).count,
-					rows: rows.body
-				});
-				return;
-			} else {
-				response.status(502).send();
-				return;
-			}
+			const rows = await getApproved(request.body.user, stride, page * stride);
+			response.status(200).send(rows);
+			return;
 		}
 		case ("wipePool"): {
-			const re = await db2(
-				`/rest/v1/pool?user=eq.${request.body.user}`,
-				"DELETE",
-				null,
-				null
-			);
-			const status = wegood(re.status) ? 200 : re.status;
-			response.status(status).send();
+			const re = sql`delete from "pool" where "user" = ${request.body.user}`
+			response.status(200).send();
 			return;
 		}
 		case ("moderate"): {
@@ -848,101 +571,71 @@ export default async function handler(request, response) {
 				id: "number",
 				approved: "boolean"
 			};
-			const decisions = request.body.decisions.filter(d => validate(d, decisionSchema).length == 0);
+			const decisions = request.body.decisions
+				.filter(d => validate(d, decisionSchema).length == 0)
+				.map(({id, approved}) => [id, approved]);
 			
-			await db(`/rest/v1/pool?approved=is.null&user=eq.${request.body.user}`, "POST", {"Prefer": "resolution=merge-duplicates"}, decisions);
-			await db(`/rest/v1/pool?approved=eq.false`, "DELETE");
-			const newModerables = await getModerables(request.body.user);
-			
+			//insert into pool ${sql(newEntries)};
+			await sql`
+				update "pool"
+					set id = (update_data.id)::bigint, approved = (update_data.approved)::boolean
+					from (values ${sql(decisions)}) as update_data(id, approved)
+					where pool.id = (update_data.id)::bigint
+			`;
+			await sql `delete from "pool" where "approved" = false`;
+			const newModerables = await sql`
+				select *
+					from "pool"
+					where "user" = ${request.body.user} and "approved" is null
+					limit 200
+			`;
+
 			response.status(200).send(newModerables);
 			return;
 		}
-		case ("post"): {
-			const messages = request.body.messages;
-			if (!messages.every(m => validate(m, messageSchema[m.version]).length == 0)){
-				response.status(400).send("Invalid messages schema");
-				return;
-			}
-
-			const entries = messages.map(m => ({
-				user: request.body.user,
-				message: m,
-				failed: false,
-				approved: true
-			}));
-
-			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries);
-
-			response.status(200).send(r);
-			break;
-		}
 		case ("unschedulePost"): {
-			const re = await db2(
-				`/rest/v1/pool?user=eq.${request.body.user}&id=eq.${request.body.id}`,
-				"DELETE",
-				null,
-				null
-			);
-			const status = wegood(re.status) ? 200 : re.status;
-			response.status(status).send();
+			await sql`
+				delete
+					from "pool"
+					where "user" = ${request.body.user} and "id" = ${request.body.id}
+			`;
+			response.status(200).send();
 			return;
-		}
-		case ("manual"): {
-			const messages = request.body.posts.map(post => post.grab ? null : {
-				version: 1,
-				image: post.images,
-				links: post.links
-			});
-			const entries = messages.map(m => ({
-				user: request.body.user,
-				message: m,
-				failed: false,
-				approved: true
-			}));
-			const r = await db("/rest/v1/pool", "POST", {"Prefer": "return=minimal"}, entries);
-			response.status(200).send(r);
-			break;
 		}
 		case ("publish"): {
 			const flags = request.body.flags?.map(f => f.trim().toLowerCase()) || [];
-
-			const idFilter = request.body.id ? "&id=eq." + request.body.id : "";
-			const failFilter = idFilter ? "" : "&failed=eq.false";
-			const url = `/rest/v1/pool?order=id&approved=eq.true${failFilter}&user=eq.${request.body.user}${idFilter}&select=*,users!inner(tg_token,access_token,additional)`;
-
-			let availablePosts = await db(url);
-			if (!availablePosts){
-				response.status(502).send("Invalid response from db");
-				return;
-			}
-			if (availablePosts.length == 0){
-				response.status(404).send("No scheduled posts for this user");
-				return;
-			}
-			if (availablePosts[0]["users"]["access_token"] != request.body.userToken){
-				response.status(401).send("Wrong user access token");
-				return;
-			}
 
 			const target = parseTelegramTarget(request.body.target);
 			if (!target && !flags.includes(PUB_FLAGS.URL_AS_TARGET)){
 				response.status(400).send("Can't parse telegram target");
 				return;
 			}
+			const count = request.body.count || 1;
 
-			const selectedPosts = [];
-			const count = safe(() => parseInt(request.body.count, 10)) || 1;
-			for (let _ = 0; _ < count && availablePosts.length > 0; ++_){
-				const index = Math.floor(availablePosts.length * Math.random());
-				selectedPosts.push(availablePosts.splice(index, 1)[0]);
+			let availablePosts = await sql`
+				select pool.*, users.tg_token
+					from pool inner join users on pool."user" = users."id"
+					where
+						pool."user" = ${request.body.user}
+						and pool."approved" = true
+						${request.body.id
+							? sql`and pool."id" = ${request.body.id}`
+							: sql`and pool."failed" = false`
+						}
+					order by random()
+					limit ${count * 2}
+			`;
+			console.log(availablePosts);
+
+			if (availablePosts.length == 0){
+				response.status(404).send("No scheduled posts for this user");
+				return;
 			}
 
-			while (selectedPosts.length > 0){
-				const post = selectedPosts.pop();
-				const error = /* flags.includes(PUB_FLAGS.URL_AS_TARGET) ?
-					await publish2URL(post.message, request.body.target, flags, request.body.extras)
-				:
-					*/ await publish2Telegram(post.message, post["users"]["tg_token"], target, request.body.extras, flags);
+			for (let tasksLeft = count; tasksLeft > 0; --tasksLeft){
+				if (availablePosts.length === 0) break;
+				const post = availablePosts.pop();
+				const error = await publish2Telegram(post.message, post.tg_token, target, request.body.extras, flags);
 
 				if (error){
 					if (flags.includes(PUB_FLAGS.DOUBLE_TAP) && availablePosts.length > 0){
@@ -950,21 +643,11 @@ export default async function handler(request, response) {
 					}
 					await Promise.allSettled([
 						tgReport(`Failed to publish post #${post.id}.\nResponse:\n${JSON.stringify(error)}`),
-						db(
-							`/rest/v1/pool?id=eq.${post.id}`,
-							"PATCH",
-							{"Prefer": "return=minimal"},
-							{failed: true}
-						)
+						sql`update pool set ${sql({failed: true})} where id = ${post.id}`
 					]);
 				} else {
 					if (!flags.includes(PUB_FLAGS.KEEP_AFTER_POST)){
-						await db(
-							`/rest/v1/pool?id=eq.${post.id}`,
-							"DELETE",
-							null,
-							null
-						);
+						await sql`delete from pool where id = ${post.id}`;
 					}
 				}
 			}

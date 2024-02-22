@@ -38,7 +38,7 @@ export async function batchGrab(){
 		pullCurtain(false);
 		return;
 	}
-	let newRows: any[] = [];
+	let newRowsCount = 0;
 	for (let i = 0; i < grabbersReference.length; ++i){
 		updateCurtainMessage(`Grabbing: ${i} / ${grabbersReference.length} done`);
 		const response = await callAPI("grab", {id: i}, true);
@@ -46,16 +46,15 @@ export async function batchGrab(){
 			report(`Grab #${i} failed`);
 			console.error(response);
 		} else
-			newRows.push(...response.data);
+			newRowsCount += parseInt(response.data, 10) || 0;
 	}
-	report(`${newRows.length} new entries`);
+	report(`${newRowsCount} new entries`);
 
 	afterGrab();
 }
 
 export async function selectiveGrab(grabberId: number, batchSize?: number){
 	pullCurtain(true);
-	let newRows: any[] = [];
 
 	const params = {
 		id: grabberId,
@@ -68,9 +67,7 @@ export async function selectiveGrab(grabberId: number, batchSize?: number){
 		report(`Grab #${grabberId} failed`);
 		console.error(response);
 	} else
-		newRows.push(...response.data);
-	
-	report(`${newRows.length} new entries`);
+		report(`${response.data} new entries`);
 
 	afterGrab();
 }
