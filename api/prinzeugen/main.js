@@ -77,6 +77,10 @@ const schema = {
 		...authSchema,
 		id: ANY_OF(["number", x => !isNaN(parseInt(x))])
 	},
+	unfailPost: {
+		...authSchema,
+		id: ANY_OF(["number", x => !isNaN(parseInt(x))])
+	},
 	manual: {
 		...authSchema,
 		posts: ARRAY_OF({
@@ -139,7 +143,7 @@ function getApproved(user, limit = "all", offset = 0){
 		select *, count(*) over() as total
 			from "pool"
 			where "user" = ${user} and "approved" = true
-			order by id asc
+			order by "failed" = false, id asc
 			limit ${limit}
 			offset ${offset}
 	`);
@@ -538,7 +542,6 @@ export default async function handler(request, response) {
 				.filter(d => validate(d, decisionSchema).length == 0)
 				.map(({id, approved}) => [id, approved]);
 			
-			//insert into pool ${sql(newEntries)};
 			await sql`
 				update "pool"
 					set id = (update_data.id)::bigint, approved = (update_data.approved)::boolean
@@ -561,6 +564,19 @@ export default async function handler(request, response) {
 				delete
 					from "pool"
 					where "user" = ${request.body.user} and "id" = ${request.body.id}
+			`;
+			response.status(200).send();
+			return;
+		}
+		case ("unfailPost"): {
+			const entry = {
+				id: request.body.id,
+				failed: false
+			}
+			await sql`
+				update "pool"
+					set ${sql(entry, "failed")}
+					where "id" = ${request.body.id}
 			`;
 			response.status(200).send();
 			return;

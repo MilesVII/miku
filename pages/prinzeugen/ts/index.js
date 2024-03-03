@@ -705,6 +705,7 @@
       if (!proto)
         return;
       proto.dataset.id = row.id;
+      proto.dataset.failed = row.failed;
       const img = proto.querySelector("img");
       if (!img)
         return;
@@ -761,9 +762,18 @@
       anchor.target = "_blank";
       return anchor;
     });
+    const tags = ["absurdres", "animated"].filter((item) => row.message?.tags?.includes(item)).map((tag) => {
+      const tagProto = fromTemplate("generic-pool-item-tag")?.firstElementChild;
+      if (!tagProto)
+        return null;
+      tagProto.textContent = tag;
+      return tagProto;
+    }).filter((tag) => tag);
     controls.append(
       ...links,
+      ...tags,
       button("Unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
+      ...[button("Unfail", () => unfailPost(row.id).then(() => dialog.close()))].filter(() => row.failed),
       button("Show item details in console", () => console.log(row))
     );
     dialog.showModal();
@@ -778,6 +788,18 @@
       const target = document.querySelector(`.pool-item[data-id="${rowId}"]`);
       if (target)
         target.classList.add("hidden");
+    }
+  }
+  async function unfailPost(rowId) {
+    pullCurtain(true);
+    const response = await callAPI("unfailPost", {
+      id: rowId
+    }, true);
+    pullCurtain(false);
+    if (response.status < 300) {
+      const target = document.querySelector(`.pool-item[data-id="${rowId}"]`);
+      if (target)
+        target.dataset.failed = "false";
     }
   }
   function generateTitle(row) {

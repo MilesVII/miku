@@ -24,6 +24,7 @@ export async function loadMessagePool(page = 0){
 		if (!proto) return;
 
 		proto.dataset.id = row.id;
+		proto.dataset.failed = row.failed;
 		const img = proto.querySelector("img");
 		if (!img) return;
 
@@ -37,7 +38,7 @@ export async function loadMessagePool(page = 0){
 			img.src = PLACEHOLDER_URL;
 		}
 		proto.addEventListener("click", () => setPreviewPost(row));
-		
+
 		container.append(proto);
 	}
 
@@ -88,9 +89,22 @@ function setPreviewPost(row: any){
 		return anchor;
 	});
 
+	const tags = ["absurdres", "animated"]
+		.filter(item => row.message?.tags?.includes(item))
+		.map(tag => {
+			const tagProto = (fromTemplate("generic-pool-item-tag") as Element)?.firstElementChild as HTMLElement;
+			if (!tagProto) return null;
+			tagProto.textContent = tag;
+			return tagProto;
+		})
+		.filter(tag => tag) as ChildNode[];
+
 	controls.append(
 		...links,
+		...tags,
 		button("Unschedule", () => unschedulePost(row.id).then(() => dialog.close())),
+		...[button("Unfail", () => unfailPost(row.id).then(() => dialog.close()))]
+			.filter(() => row.failed),
 		button("Show item details in console", () => console.log(row))
 	);
 
@@ -107,6 +121,19 @@ async function unschedulePost(rowId: number){
 	if (response.status < 300){
 		const target = document.querySelector(`.pool-item[data-id="${rowId}"]`);
 		if (target) target.classList.add("hidden");
+	}
+}
+
+async function  unfailPost(rowId: number) {
+	pullCurtain(true);
+	const response = await callAPI("unfailPost", {
+		id: rowId
+	}, true);
+	pullCurtain(false);
+
+	if (response.status < 300){
+		const target = document.querySelector<HTMLElement>(`.pool-item[data-id="${rowId}"]`);
+		if (target) target.dataset.failed = "false";
 	}
 }
 

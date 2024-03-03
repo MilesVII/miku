@@ -73,6 +73,10 @@
 	max-height: 20vh;
 }
 
+.pool-item[data-failed="true"] {
+	opacity: .7;
+}
+
 .selector-theme {
 	height: 1.2lh;
 }

@@ -81,3 +81,9 @@ export function save(key: string, data: any) {
 	else
 		localStorage.removeItem(key);
 }
+
+export function conditionedList<T>(...pairs: [boolean, T][]): T[] {
+	return (pairs
+		.filter(([condition]) => condition)
+		.map(([_c, value]) => value));
+}
