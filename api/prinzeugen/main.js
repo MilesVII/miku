@@ -434,7 +434,6 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 }
 
 export default async function handler(request, response) {
-	console.log(process.env.PE_NEON_CONNECTION_STRING);
 	if (request.method != "POST" || !request.body){
 		response.status(400).send("Malformed request. Content-Type header and POST required.");
 		return;
