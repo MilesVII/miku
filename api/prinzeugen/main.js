@@ -433,42 +433,8 @@ async function publish2Telegram(message, token, target, extras = {}, flags){
 	return "WTF is that message version, how did you pass validation";
 }
 
-const CACHING_ERROR_NOT_IMAGE = "not image";
-async function saveCache(id, content){
-	const meta = await pingContentUrl(content);
-	if (meta?.type != "img") return CACHING_ERROR_NOT_IMAGE;
-	
-	const raw = await phetchV2(content);
-	if (!wegood(raw.status)) return "failed to download";
-	
-	const [original, preview] = await Promise.all([
-		processImage(raw.raw, {format: "avif", resize: {w: 2048, h: 2048}}),
-		processImage(raw.raw, {format: "avif", resize: {w: 1024, h: 1024}})
-	]);
-	if (!original || !preview) return [null, null];
-	
-	const [r0, r1] = await Promise.all([
-		uploadToStorage("images", `${id}.avif`, original.data),
-		uploadToStorage("images", `${id}_p.avif`, preview.data)
-	]);
-
-	const wefine = 
-		r => wegood(r.status) || 
-		(
-			r.status == 400 && 
-			r.body.statusCode == "409" && 
-			r.body.error == "Duplicate"
-		);
-
-	if (wefine(r0) && wefine(r1)){
-		return [
-			getStorageLink("images", `${id}.avif`),
-			getStorageLink("images", `${id}_p.avif`)
-		]
-	} else return "failed to upload";
-}
-
 export default async function handler(request, response) {
+	console.log(process.env.PE_NEON_CONNECTION_STRING);
 	if (request.method != "POST" || !request.body){
 		response.status(400).send("Malformed request. Content-Type header and POST required.");
 		return;
