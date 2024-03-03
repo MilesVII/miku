@@ -3,7 +3,7 @@ import { grabbersMeta } from "./grabbers.js";
 import { validate, ARRAY_OF, OPTIONAL, DYNAMIC, ANY_OF } from "arstotzka"; 
 import postgres from "postgres";
 
-const sql = postgres(process.env.PE_NEON_CONNECTION_STRING);
+const sql = postgres(process.env.PE_BOFORS_CONNECTION_STRING);
 
 const NINE_MB = 9 * 1024 * 1024;
 const PUB_FLAGS = {
@@ -21,22 +21,23 @@ const TG_BUTTON_SCHEMA = {
 	url: "string"
 };
 
+const authSchema = {
+	user: "number",
+	userToken: "string",
+};
 const schema = {
 	debug:{},
 	login: {
-		user: "number",
-		userToken: "string"
+		...authSchema
 	},
 	saveSettings: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		newUserToken: [],
 		newTgToken: [],
 		additionalData: "string"
 	},
 	setGrabbers: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		grabbers: ARRAY_OF([
 			DYNAMIC(x => grabbersMeta[x?.type]?.schema),
 			{
@@ -45,18 +46,15 @@ const schema = {
 		])
 	},
 	getGrabbers: {
-		user: "number",
-		userToken: "string"
+		...authSchema,
 	},
 	grab: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		id: [OPTIONAL, "number"],
 		batchSize: [OPTIONAL, "number"]
 	},
 	getModerables: {
-		user: "number",
-		userToken: "string"
+		...authSchema
 	},
 	getPool: {
 		user: "number"
@@ -66,30 +64,30 @@ const schema = {
 		page: "number"
 	},
 	wipePool: {
-		user: "number",
-		userToken: "string"
+		...authSchema
 	},
 	moderate: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		decisions: ARRAY_OF({
 			id: "number",
 			approved: "boolean"
 		})
 	},
 	unschedulePost: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		id: ANY_OF(["number", x => !isNaN(parseInt(x))])
 	},
 	manual: {
-		user: "number",
-		userToken: "string",
+		...authSchema,
 		posts: ARRAY_OF({
 			images: ARRAY_OF("string"),
 			links: ARRAY_OF(TG_BUTTON_SCHEMA)
 		})
 	},
+	// backup: {
+	// 	...authSchema,
+	// 	table: x => ["users", "pool"].includes(x)
+	// },
 	publish: {
 		user: "number",
 		userToken: "string",
@@ -619,6 +617,12 @@ export default async function handler(request, response) {
 			response.status(200).send();
 			return;
 		}
+		// case ("backup"): {
+		// 	const table = await sql`select * from users`;
+		// 	//console.log(await tgReport(table));
+		// 	response.status(200).send(table);
+		// 	return;
+		// }
 		default: {
 			response.status(400).send("Malformed request");
 			return;
