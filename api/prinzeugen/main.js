@@ -625,7 +625,6 @@ export default async function handler(request, response) {
 					order by random()
 					limit ${count * 2}
 			`;
-			console.log(availablePosts);
 
 			if (availablePosts.length == 0){
 				response.status(404).send("No scheduled posts for this user");

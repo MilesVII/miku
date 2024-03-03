@@ -207,7 +207,6 @@
         const raw = [...ss.cssRules];
         rules.push(...raw.filter((r) => r.constructor.name === "CSSStyleRule"));
       }
-    console.log(rules);
     const themes = rules.map((r) => r.selectorText.match(/\.theme-(.*)/)).filter((r) => r);
     const container = new DocumentFragment();
     container.append(...themes.map((t) => selectorItem(...t)));
@@ -595,14 +594,13 @@
         report(`Grab #${i} failed`);
         console.error(response);
       } else
-        newRowsCount += response.data;
+        newRowsCount += parseInt(response.data, 10) || 0;
     }
     report(`${newRowsCount} new entries`);
     afterGrab();
   }
   async function selectiveGrab(grabberId, batchSize) {
     pullCurtain(true);
-    let newRowsCount = 0;
     const params = {
       id: grabberId,
       ...batchSize ? { batchSize } : {}
@@ -613,8 +611,7 @@
       report(`Grab #${grabberId} failed`);
       console.error(response);
     } else
-      newRowsCount += response.data;
-    report(`${newRowsCount} new entries`);
+      report(`${response.data} new entries`);
     afterGrab();
   }
   async function afterGrab() {
