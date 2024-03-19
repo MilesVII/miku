@@ -41,6 +41,11 @@
 	max-height: var(--dims-popup-height);
 	color: var(--color-secondary);
 	overflow: auto;
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-secondary) transparent;
+}
+.console[open] > div:hover {
+	scrollbar-color: var(--color-accent) transparent;
 }
 .console[open] > div > div:hover {
 	color: var(--color-text);
