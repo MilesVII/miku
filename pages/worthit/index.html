@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width; initial-scale=1; maximum-scale=1; user-scalable=0;"/>
+		<title>worthit</title>
+		<link rel="icon" type="image/png" href="favicon.png"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+
+		<link rel="stylesheet" href="styles/sds/core.css"/>
+		<link rel="stylesheet" href="styles/sds/inputs.css"/>
+		<link rel="stylesheet" href="styles/sds/layouts.css"/>
+		<link rel="stylesheet" href="styles/sds/appearance.css"/>
+		
+		<link rel="stylesheet" href="styles/main.css"/>
+	</head>
+
+	<body class="wide inflated">
+		<div class="content-width padded container column levitating">
+			<div>
+				inspired by <a href="https://xkcd.com/1205/">xkcd.com/1205</a>
+			</div>
+			<div>
+				all inputs accept amount of time in <span class="highlight">yy:mm:dd:hh:mm:ss</span> format. sections are omitted starting from the left
+			</div>
+			<label>
+				<fieldset>
+					<legend>Relevancy time period</legend>
+					<div class="container row centered">
+						<input type="text" id="input-relevancy" class="field fit" placeholder="yy:mm:dd:hh:mm:ss" value="5:00:00:00:00:00"/>
+						<div class="subtle shadow"></div>
+					</div>
+				</fieldset>
+			</label>
+			<label>
+				<fieldset>
+					<legend>Task occurence period</legend>
+					<div class="container row centered">
+						<input type="text" id="input-period" class="field fit" placeholder="yy:mm:dd:hh:mm:ss" value="07:00:00:00"/>
+						<div class="subtle shadow"></div>
+					</div>
+				</fieldset>
+			</label>
+			<label>
+				<fieldset>
+					<legend>Time spent on each task occurence</legend>
+					<div class="container row centered">
+						<input type="text" id="input-toll" class="field fit" placeholder="yy:mm:dd:hh:mm:ss" value="05:00"/>
+						<div class="subtle shadow"></div>
+					</div>
+				</fieldset>
+			</label>
+			
+			<div>optimizing this task for more than <output class="highlight"></output> will be inefficient</div>
+		</div>
+		<script>
+			const MINUTE = 60;
+			const HOUR = 60 * MINUTE;
+			const DAY = 24 * HOUR;
+			const MONTH = 30 * DAY;
+			const YEAR = 365.24 * DAY;
+
+			const digitValue = [
+				1,
+				MINUTE,
+				HOUR,
+				DAY,
+				MONTH,
+				YEAR
+			];
+			// const digitCap = [
+			// 	60,
+			// 	60,
+			// 	24,
+			// 	30,
+			// 	12,
+			// 	Infinity
+			// ];
+			const digitNames = [
+				["second", "seconds"],
+				["minute", "minutes"],
+				["hour", "hours"],
+				["day", "days"],
+				["month", "months"],
+				["year", "years"],
+			];
+			const inputs = [
+				"input-relevancy",
+				"input-period",
+				"input-toll"
+			];
+			const inputAddons = [
+				"", "every ", ""
+			];
+
+			function collectValue(id) {
+				const raw = document.querySelector(`#${id}`).value;
+				console.log(raw);
+				const digits = raw
+					.split(":")
+					.map(digit => digit.trim())
+					.slice(-6)
+					.map(digit => parseInt(digit, 10))
+					.map(digit => isNaN(digit) ? 0 : digit)
+					.reverse();
+				let seconds = 0;
+				return digits.reduce((p, c, i) => p + c * digitValue[i], 0);
+			}
+
+			function secondsToTime(seconds) {
+				return digitValue.toReversed().map(value => {
+					const secondsStored = seconds;
+					seconds = seconds % value;
+					return Math.round((secondsStored - seconds) / value);
+				});
+			}
+			function timeToReadable(time) {
+				if (time?.length !== 6) return "invalid";
+
+				return time
+					.map((value, index) => {
+						if (value === 0) return null;
+						return `${value} ${digitNames[5 - index][value === 1 ? 0 : 1]}`;
+					})
+					.filter(value => value !== null)
+					.join(", ")
+			}
+			function formula(relevancy, period, toll){
+				return toll * relevancy * (1 / period);
+			}
+
+			function update(){
+				const output = document.querySelector("output");
+				const [relevancy, period, toll] = inputs.map((id, i) => {
+					const input = document.querySelector(`#${id}`);
+					const inputValue = collectValue(id);
+					
+					const withAddon =
+						inputValue === 0
+							? ""
+							: inputAddons[i] + timeToReadable(secondsToTime(inputValue));
+					input.nextElementSibling.textContent = withAddon;
+					return inputValue;
+				});
+
+				const formulaResult = formula(relevancy, period, toll);
+				output.textContent =
+					isNaN(formulaResult) || formulaResult === 0
+						? "unknown amount of time"
+						: timeToReadable(secondsToTime(formulaResult));
+			}
+			update();
+
+			inputs.forEach(id =>
+				document.querySelector(`#${id}`)?.addEventListener("input", update)
+			);
+		</script>
+	</body>
+</html>
